@@ -70,7 +70,7 @@ import ru.rutoken.pkcs11jna.RtPkcs11Constants;
 import ru.rutoken.demobank.pkcs11caller.Token;
 import ru.rutoken.demobank.pkcs11caller.TokenManager;
 
-public class CryptoproPlugin extends CordovaPlugin {
+public class RutokenPlugin extends CordovaPlugin {
 
     private String KeyStoreType = "Aktiv Rutoken ECP BT 1";
 
@@ -84,7 +84,7 @@ public class CryptoproPlugin extends CordovaPlugin {
     private String mTokenSerial = NO_TOKEN;
     public static CordovaWebView gWebView;
 
-    public CryptoproPlugin() {}
+    public RutokenPlugin() {}
 
     public void pluginInitialize() {
         Log.d("CryptoproPlugin", "==> af ________ CryptoproPlugin pluginInitialize");

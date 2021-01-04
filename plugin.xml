@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        id="cordova-plugin-rutoken"
+        version="1.1.0">
+
+    <name>Rutoken cordova plugin</name>
+    <description></description>
+    <author>Alexey Ermashov</author>
+    <keywords>android, rutoken</keywords>
+    <license>MIT</license>
+
+    <js-module src="www/rutoken.js" name="Rutoken">
+        <clobbers target="Rutoken" />
+    </js-module>
+    <engines>
+        <engine name="cordova-android" version=">=3.0.0"/>
+    </engines>
+
+    <platform name="android">
+        <source-file src="src/ru/eaasoft/plugins/RutokenPlugin.java" target-dir="src/ru/eaasoft/plugins/" />
+        <config-file target="res/xml/config.xml" parent="/*">
+            <feature name="Rutoken" >
+                <param name="android-package" value="ru.eaasoft.plugins.RutokenPlugin" />
+                <param name="onload" value="true" />
+            </feature>
+        </config-file>
+
+        <framework src="src/android/rutoken.gradle" custom="true" type="gradleReference" />
+
+        <source-file src="src/android/libs/pkcs11jna-1.1.4.jar" target-dir="libs" framework="true"/>
+        <source-file src="src/android/libs/rtserviceconnection-1.0.2.aar" target-dir="libs" framework="true"/>
+
+        <resource-file src="src/android/jniLibs/armeabi-v7a/librtpcsc.so" target="jniLibs/armeabi-v7a/librtpcsc.so"/>
+        <resource-file src="src/android/jniLibs/armeabi-v7a/librtpkcs11ecp.so" target="jniLibs/armeabi-v7a/librtpkcs11ecp.so"/>
+
+        <resource-file src="src/android/jniLibs/arm64-v8a/librtpcsc.so" target="jniLibs/arm64-v8a/librtpcsc.so"/>
+        <resource-file src="src/android/jniLibs/arm64-v8a/librtpkcs11ecp.so" target="jniLibs/arm64-v8a/librtpkcs11ecp.so"/>
+
+    </platform>
+</plugin>

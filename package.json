@@ -1,0 +1,25 @@
+{
+  "name": "cordova-plugin-rutoken",
+  "version": "1.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ermashov/cordova-plugin-rutoken.git"
+  },
+  "keywords": [
+    "ecosystem:cordova",
+    "cordova",
+    "cordova-android",
+    "locale"
+  ],
+  "author": "eaasoft",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ermashov/cordova-plugin-rutoken"
+  },
+  "homepage": "https://github.com/ermashov/cordova-plugin-rutoken"
+}
