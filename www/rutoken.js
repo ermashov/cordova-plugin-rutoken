@@ -2,18 +2,18 @@ var Rutoken = function() {};
 
 
 Rutoken.prototype.init = function(success, fail) {
-    cordova.exec(success, fail, 'Cryptopro', 'init', []);
+    cordova.exec(success, fail, 'RutokenPlugin', 'init', []);
 };
 
 
 Rutoken.prototype.getTokenInfo = function(params, success, fail) {
-    cordova.exec(success, fail, 'Cryptopro', 'getTokenInfo', [
+    cordova.exec(success, fail, 'RutokenPlugin', 'getTokenInfo', [
         params.slotId,
     ]);
 };
 
 Rutoken.prototype.getCertificates = function(success, fail) {
-    cordova.exec(success, fail, 'Cryptopro', 'getCertificates', []);
+    cordova.exec(success, fail, 'RutokenPlugin', 'getCertificates', []);
 };
 
 if (!window.plugins) {
