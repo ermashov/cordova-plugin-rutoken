@@ -11,7 +11,6 @@ import android.content.res.Resources;
 import java.util.HashMap;
 import java.util.Map;
 
-import help.abc.docapp.R;
 
 public class Pkcs11ErrorTranslator {
     private static Pkcs11ErrorTranslator INSTANCE;
