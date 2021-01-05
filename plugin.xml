@@ -20,6 +20,44 @@
 
     <platform name="android">
         <source-file src="src/ru/eaasoft/plugins/RutokenPlugin.java" target-dir="src/ru/eaasoft/plugins/" />
+
+        <source-file src="src/ru/rutoken/demobank/bcprovider/digest/Digest.java" target-dir="src/ru/rutoken/demobank/bcprovider/digest/" />
+        <source-file src="src/ru/rutoken/demobank/bcprovider/digest/GostR3411_1994Digest.java" target-dir="src/ru/rutoken/demobank/bcprovider/digest/" />
+        <source-file src="src/ru/rutoken/demobank/bcprovider/digest/GostR3411_2012_256Digest.java" target-dir="src/ru/rutoken/demobank/bcprovider/digest/" />
+        <source-file src="src/ru/rutoken/demobank/bcprovider/digest/GostR3411_2012_512Digest.java" target-dir="src/ru/rutoken/demobank/bcprovider/digest/" />
+        <source-file src="src/ru/rutoken/demobank/bcprovider/digest/Pkcs11Digest.java" target-dir="src/ru/rutoken/demobank/bcprovider/digest/" />
+        <source-file src="src/ru/rutoken/demobank/bcprovider/CmsSigner.java" target-dir="src/ru/rutoken/demobank/bcprovider/" />
+        <source-file src="src/ru/rutoken/demobank/bcprovider/DigestProvider.java" target-dir="src/ru/rutoken/demobank/bcprovider/" />
+        <source-file src="src/ru/rutoken/demobank/bcprovider/GostContentSigner.java" target-dir="src/ru/rutoken/demobank/bcprovider/" />
+        <source-file src="src/ru/rutoken/demobank/bcprovider/GostDigestCalculator.java" target-dir="src/ru/rutoken/demobank/bcprovider/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/exception/CertNotFoundException.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/exception/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/exception/CertParsingException.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/exception/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/exception/GeneralErrorException.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/exception/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/exception/KeyNotFoundException.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/exception/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/exception/KeyTypeNotSupported.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/exception/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/exception/ObjectNotFoundException.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/exception/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/exception/Pkcs11CallerException.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/exception/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/exception/Pkcs11Exception.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/exception/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/signature/AbstractSignature.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/signature/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/signature/GostR3410_2001Signature.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/signature/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/signature/GostR3410_2012_256Signature.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/signature/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/signature/GostR3410_2012_512Signature.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/signature/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/signature/Signature.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/signature/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/Certificate.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/CertificateAndGostKeyPair.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/GostKeyPair.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/GostOids.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/Pkcs11Result.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/RtPkcs11Library.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/SlotEventThread.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/Token.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/TokenManager.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/TokenManagerEvent.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/Utils.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/" />
+        <source-file src="src/ru/rutoken/demobank/utils/KeyExecutors.java" target-dir="src/ru/rutoken/demobank/utils/" />
+        <source-file src="src/ru/rutoken/demobank/utils/Pkcs11ErrorTranslator.java" target-dir="src/ru/rutoken/demobank/utils/" />
+
+
         <config-file target="res/xml/config.xml" parent="/*">
             <feature name="Rutoken" >
                 <param name="android-package" value="ru.eaasoft.plugins.RutokenPlugin" />
