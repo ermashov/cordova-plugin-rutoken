@@ -3,59 +3,29 @@ package ru.eaasoft.plugins;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaPlugin;
-import org.apache.cordova.CordovaPreferences;
 import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
 
-import android.os.AsyncTask;
-import android.os.Bundle;
 import android.util.Log;
 
-import com.google.firebase.messaging.FirebaseMessaging;
-import com.sun.jna.Native;
 import com.sun.jna.NativeLong;
 import com.sun.jna.ptr.NativeLongByReference;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.security.DigestInputStream;
-import java.security.MessageDigest;
-import java.security.PrivateKey;
-import java.security.Signature;
-import java.security.cert.X509Certificate;
-import java.util.Calendar;
+import org.json.JSONObject;
 
-import android.os.Handler;
-import android.os.Looper;
-import android.util.Log;
+import android.content.Context;
 
-import java.io.IOException;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
 
-import org.json.JSONObject;
-
-import java.security.Security;
-import java.io.File;
-
-import java.security.KeyStore;
-import java.util.Enumeration;
-
-import android.content.Context;
-
-import androidx.annotation.NonNull;
-import androidx.lifecycle.LifecycleOwner;
 
 import ru.rutoken.demobank.pkcs11caller.Certificate;
+import ru.rutoken.demobank.pkcs11caller.CertificateAndKeyPair;
+import ru.rutoken.demobank.pkcs11caller.GostKeyPair;
+import ru.rutoken.demobank.pkcs11caller.KeyPair;
 import ru.rutoken.demobank.pkcs11caller.RtPkcs11Library;
 //import ru.rutoken.demobank.pkcs11caller.TokenManagerEvent;
 //import ru.rutoken.demobank.pkcs11caller.SlotEventThread;
@@ -66,14 +36,10 @@ import ru.rutoken.pkcs11jna.CK_ATTRIBUTE;
 import ru.rutoken.pkcs11jna.CK_C_INITIALIZE_ARGS;
 import ru.rutoken.pkcs11jna.CK_SLOT_INFO;
 import ru.rutoken.pkcs11jna.CK_TOKEN_INFO;
-import ru.rutoken.pkcs11jna.CK_TOKEN_INFO_EXTENDED;
 import ru.rutoken.pkcs11jna.Pkcs11Constants;
-import ru.rutoken.pkcs11jna.RtPkcs11;
-import ru.rutoken.pkcs11jna.RtPkcs11Constants;
-import org.json.JSONArray;
 
 import ru.rutoken.demobank.pkcs11caller.Token;
-import ru.rutoken.demobank.pkcs11caller.TokenManager;
+import ru.rutoken.pkcs11jna.RtPkcs11;
 
 //import static ru.rutoken.demobank.pkcs11caller.TokenManagerEvent.EventType.SLOT_ADDED;
 //import static ru.rutoken.demobank.pkcs11caller.TokenManagerEvent.EventType.SLOT_REMOVED;
@@ -197,72 +163,133 @@ public class RutokenPlugin extends CordovaPlugin {
 
         }else if(action.equals("waitForSlotEvent")){
 
-            NativeLongByReference slotId = new NativeLongByReference();
-            NativeLong rv;
 
-            rv = RtPkcs11Library.getInstance().C_WaitForSlotEvent(new NativeLong(0), slotId, null);
+            cordova.getThreadPool().execute(new Runnable() {
+                @Override
+                public void run() {
 
-            if (rv.longValue() == Pkcs11Constants.CKR_CRYPTOKI_NOT_INITIALIZED) {
-                Log.d("waitForSlotEvent", "Exit " + slotId.getValue().toString());
-                callbackContext.error("Token CKR_CRYPTOKI_NOT_INITIALIZED");
-                return false;
-            }
+                    while (!Thread.currentThread().isInterrupted()) {
+                        Log.d("waitForSlotEvent", "init");
+
+                        NativeLongByReference slotId = new NativeLongByReference();
+                        NativeLong rv;
+
+                        rv = RtPkcs11Library.getInstance().C_WaitForSlotEvent(new NativeLong(0), slotId, null);
+
+                        Log.d("waitForSlotEvent", "bef C_WaitForSlotEvent");
+
+                        if (rv.longValue() == Pkcs11Constants.CKR_CRYPTOKI_NOT_INITIALIZED) {
+                            Log.d("waitForSlotEvent", "Exit " + slotId.getValue().toString());
+                            callbackContext.error("Token CKR_CRYPTOKI_NOT_INITIALIZED");
+                        }
+
+                        try {
+                            String jsonResult = "";
+
+                            Pkcs11Exception.throwIfNotOk(rv);
+                            Log.d("waitForSlotEvent", "find slot id" + slotId.getValue().toString());
+
+                            CK_SLOT_INFO slotInfo = new CK_SLOT_INFO();
+                            NativeLong rvl;
+
+                            rvl = RtPkcs11Library.getInstance().C_GetSlotInfo(slotId.getValue(), slotInfo);
+                            Pkcs11Exception.throwIfNotOk(rvl);
+
+                            JSONObject jsonObjResult = new JSONObject();
+                            JSONObject jsonObjTokenInfo = new JSONObject();
+
+
+                            jsonObjResult.put("slotId", slotId.getValue().toString());
+
+                            if ((Pkcs11Constants.CKF_TOKEN_PRESENT & slotInfo.flags.longValue()) != 0x00) {
+                                jsonObjResult.put("event", "add");
+                                Log.d("waitForSlotEvent", "add");
+
+                                final CK_TOKEN_INFO tokenInfo = new CK_TOKEN_INFO();
+                                Pkcs11Exception.throwIfNotOk(
+                                        RtPkcs11Library.getInstance().C_GetTokenInfo(slotId.getValue(), tokenInfo));
+
+                                String mLabel = Utils.removeTrailingSpaces(tokenInfo.label);
+                                String mModel = Utils.removeTrailingSpaces(tokenInfo.model);
+                                String mSerialNumber = Utils.removeTrailingSpaces(tokenInfo.serialNumber);
+                                long decSerial = Long.parseLong(mSerialNumber, 16);
+                                String decSerialString = String.valueOf(decSerial);
+                                String mShortDecSerialNumber = String.valueOf(decSerial % 100000);
+
+                                jsonObjTokenInfo.put("label", mLabel);
+                                jsonObjTokenInfo.put("model", mModel);
+                                jsonObjTokenInfo.put("serialNumber", mSerialNumber);
+                                jsonObjTokenInfo.put("decSerial", decSerialString);
+                                jsonObjTokenInfo.put("shortDecSerialNumber", mShortDecSerialNumber);
+                                //new SlotEventThread.SlotEvent(slotId, slotInfo)
+                                Log.d("waitForSlotEvent", "add");
+                            } else {
+                                Log.d("waitForSlotEvent", "remove");
+                                jsonObjResult.put("event", "remove");
+                            }
+
+                            Log.d("waitForSlotEvent", "tokenInfo");
+
+                            jsonObjResult.put("tokenInfo", jsonObjTokenInfo);
+
+                            jsonResult = jsonObjResult.toString();
+
+                            //callbackContext.success(jsonResult);
+
+
+                            PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, jsonResult);
+                            pluginResult.setKeepCallback(true);
+                            callbackContext.sendPluginResult(pluginResult);
+
+
+                            //addSlot();
+                        } catch (Exception e) {
+                            //TokenManager.getInstance().postEvent(new TokenManagerEvent(SLOT_EVENT_THREAD_FAILED));
+                            callbackContext.error("slot error");
+                        }
+                    }
+                }
+            });
+
+
+            return true;
+
+        }else if(action.equals("getCertificates")){
+
+            Log.v(getClass().getName(), "init getCertificates");
 
             try {
-                String jsonResult = "";
 
-                Pkcs11Exception.throwIfNotOk(rv);
-                Log.d("waitForSlotEvent", "find slot id" + slotId.getValue().toString());
+                NativeLong slotId = new NativeLong(args.getInt(0));
 
-                CK_SLOT_INFO slotInfo = new CK_SLOT_INFO();
-                NativeLong rvl;
+                NativeLong session = openSession(slotId);
 
-                rvl = RtPkcs11Library.getInstance().C_GetSlotInfo(slotId.getValue(), slotInfo);
-                Pkcs11Exception.throwIfNotOk(rvl);
+               final HashMap<String, CertificateAndKeyPair> mCertificateMap = new HashMap<>();
 
-                JSONObject jsonObjResult = new JSONObject();
-                JSONObject jsonObjTokenInfo = new JSONObject();
+                Certificate.CertificateCategory[] supportedCategories = {Certificate.CertificateCategory.UNSPECIFIED, Certificate.CertificateCategory.USER};
+
+                JSONArray jsonArrResult = new JSONArray();
+
+                for (Certificate.CertificateCategory category : supportedCategories) {
+                    JSONObject jsonObject = new JSONObject();
+
+                    Map<String, CertificateAndKeyPair> certMap =  getCertificatesWithCategory(category, session);
+
+                    //jsonObject.put("", certMap.);
+                    //jsonArrResult.put(jsonObject);
 
 
-                jsonObjResult.put("slotId", slotId.getValue().toString());
+                    mCertificateMap.putAll(certMap);
 
-                if ((Pkcs11Constants.CKF_TOKEN_PRESENT & slotInfo.flags.longValue()) != 0x00) {
-                    jsonObjResult.put("event", "add");
-                    Log.d("waitForSlotEvent", "add");
-
-                    final CK_TOKEN_INFO tokenInfo = new CK_TOKEN_INFO();
-                    Pkcs11Exception.throwIfNotOk(
-                            RtPkcs11Library.getInstance().C_GetTokenInfo(slotId.getValue(), tokenInfo));
-
-                    String mLabel = Utils.removeTrailingSpaces(tokenInfo.label);
-                    String mModel = Utils.removeTrailingSpaces(tokenInfo.model);
-                    String mSerialNumber = Utils.removeTrailingSpaces(tokenInfo.serialNumber);
-                    long decSerial = Long.parseLong(mSerialNumber, 16);
-                    String decSerialString = String.valueOf(decSerial);
-                    String mShortDecSerialNumber = String.valueOf(decSerial % 100000);
-
-                    jsonObjTokenInfo.put("label", mLabel);
-                    jsonObjTokenInfo.put("model", mModel);
-                    jsonObjTokenInfo.put("serialNumber", mSerialNumber);
-                    jsonObjTokenInfo.put("decSerial", decSerialString);
-                    jsonObjTokenInfo.put("shortDecSerialNumber", mShortDecSerialNumber);
-                    //new SlotEventThread.SlotEvent(slotId, slotInfo)
-
-                } else {
-                    Log.d("waitForSlotEvent", "remove");
-                    jsonObjResult.put("event", "remove");
+                    jsonArrResult.put(jsonObject);
                 }
 
-                jsonObjResult.put("tokenInfo", jsonObjTokenInfo);
+                Log.v("cert+++++++", mCertificateMap.toString());
 
-                jsonResult = jsonObjResult.toString();
+                closeSession(session);
 
-                callbackContext.success(jsonResult);
-                return true;
-                //addSlot();
-            } catch (Exception e) {
-                //TokenManager.getInstance().postEvent(new TokenManagerEvent(SLOT_EVENT_THREAD_FAILED));
-                callbackContext.error("slot error");
+            }catch (Exception e){
+                callbackContext.error(e.getMessage());
                 return false;
             }
 
@@ -325,6 +352,84 @@ public class RutokenPlugin extends CordovaPlugin {
 
         callbackContext.error("method not found");
         return false;
+    }
+
+    private  void closeSession(NativeLong mSession){
+        try {
+            NativeLong rv = RtPkcs11Library.getInstance().C_CloseSession(mSession);
+            Pkcs11Exception.throwIfNotOk(rv);
+        } catch (Pkcs11CallerException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private NativeLong openSession(NativeLong slotId) throws Pkcs11Exception {
+        final NativeLongByReference session = new NativeLongByReference();
+        final NativeLong rv = RtPkcs11Library.getInstance().C_OpenSession(
+                slotId, new NativeLong(Pkcs11Constants.CKF_SERIAL_SESSION), null, null, session);
+
+        return session.getValue();
+    }
+
+    private Map<String, CertificateAndKeyPair> getCertificatesWithCategory(Certificate.CertificateCategory category,
+                                                                               NativeLong session)
+            throws Pkcs11CallerException {
+
+        RtPkcs11 mRtPkcs11 = RtPkcs11Library.getInstance();
+
+        CK_ATTRIBUTE[] template = (CK_ATTRIBUTE[]) (new CK_ATTRIBUTE()).toArray(2);
+
+        NativeLongByReference certClass =
+                new NativeLongByReference(new NativeLong(Pkcs11Constants.CKO_CERTIFICATE));
+        template[0].type = new NativeLong(Pkcs11Constants.CKA_CLASS);
+        template[0].pValue = certClass.getPointer();
+        template[0].ulValueLen = new NativeLong(NativeLong.SIZE);
+
+        NativeLongByReference certCategory = new NativeLongByReference(new NativeLong(category.getValue()));
+        template[1].type = new NativeLong(Pkcs11Constants.CKA_CERTIFICATE_CATEGORY);
+        template[1].pValue = certCategory.getPointer();
+        template[1].ulValueLen = new NativeLong(NativeLong.SIZE);
+
+        NativeLong rv = mRtPkcs11.C_FindObjectsInit(session, template, new NativeLong(template.length));
+        Pkcs11Exception.throwIfNotOk(rv);
+
+        NativeLong[] objects = new NativeLong[30];
+        NativeLongByReference count = new NativeLongByReference(new NativeLong(objects.length));
+        ArrayList<NativeLong> certs = new ArrayList<>();
+        do {
+            rv = mRtPkcs11.C_FindObjects(session, objects, new NativeLong(objects.length), count);
+            if (rv.longValue() != Pkcs11Constants.CKR_OK) break;
+            certs.addAll(Arrays.asList(objects).subList(0, count.getValue().intValue()));
+        } while (count.getValue().longValue() == objects.length);
+        NativeLong rv2 = mRtPkcs11.C_FindObjectsFinal(session);
+        Pkcs11Exception.throwIfNotOk(rv);
+        Pkcs11Exception.throwIfNotOk(rv2);
+
+        HashMap<String, CertificateAndKeyPair> certificateMap = new HashMap<>();
+        for (NativeLong c : certs) {
+            try {
+                Log.v("TAG", "___________________________________________________________________");
+
+                Certificate cert = new Certificate(mRtPkcs11, session.longValue(), c.longValue());
+
+                Log.v("TAG", "index=");
+                Log.v("TAG", "cert finded");
+                Log.v("TAG", cert.getCertificateHolder().getSerialNumber().toString());
+                Log.v("TAG", cert.getSubject().toString());
+
+                KeyPair keyPair = KeyPair.getKeyPairByCkaId(mRtPkcs11, session.longValue(), cert.getCkaId());
+               // KeyPair keyPair = KeyPair.getKeyPairByCertificate(mRtPkcs11, session.longValue(), cert.getCertificateHolder());
+
+                Log.v("TAG", "af certificateMap");
+
+                certificateMap.put(cert.fingerprint(), new CertificateAndKeyPair(cert, keyPair));
+
+            } catch (Pkcs11CallerException ignore) {
+                Log.v("TAG", "ERROR");
+                Log.v("TAG", ignore.getMessage());
+            }
+        }
+        return certificateMap;
     }
 
 

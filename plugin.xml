@@ -45,7 +45,9 @@
         <source-file src="src/ru/rutoken/demobank/pkcs11caller/signature/Signature.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/signature/" />
         <source-file src="src/ru/rutoken/demobank/pkcs11caller/Certificate.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/" />
         <source-file src="src/ru/rutoken/demobank/pkcs11caller/CertificateAndGostKeyPair.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/CertificateAndKeyPair.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/" />
         <source-file src="src/ru/rutoken/demobank/pkcs11caller/GostKeyPair.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/" />
+        <source-file src="src/ru/rutoken/demobank/pkcs11caller/KeyPair.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/" />
         <source-file src="src/ru/rutoken/demobank/pkcs11caller/GostOids.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/" />
         <source-file src="src/ru/rutoken/demobank/pkcs11caller/Pkcs11Result.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/" />
         <source-file src="src/ru/rutoken/demobank/pkcs11caller/RtPkcs11Library.java" target-dir="src/ru/rutoken/demobank/pkcs11caller/" />

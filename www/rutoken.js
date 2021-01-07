@@ -13,8 +13,10 @@ cordova.define("cordova-plugin-rutoken.Rutoken", function(require, exports, modu
         ]);
     };
 
-    Rutoken.prototype.getCertificates = function(success, fail) {
-        cordova.exec(success, fail, 'RutokenPlugin', 'getCertificates', []);
+    Rutoken.prototype.getCertificates = function(params, success, fail) {
+        cordova.exec(success, fail, 'RutokenPlugin', 'getCertificates', [
+            params.slotId,
+        ]);
     };
 
     Rutoken.prototype.getTokens = function(success, fail) {
