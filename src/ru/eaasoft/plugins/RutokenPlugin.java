@@ -24,7 +24,6 @@ import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.Signature;
-import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.Calendar;
 
@@ -56,19 +55,30 @@ import android.content.Context;
 import androidx.annotation.NonNull;
 import androidx.lifecycle.LifecycleOwner;
 
+import ru.rutoken.demobank.pkcs11caller.Certificate;
 import ru.rutoken.demobank.pkcs11caller.RtPkcs11Library;
+//import ru.rutoken.demobank.pkcs11caller.TokenManagerEvent;
+//import ru.rutoken.demobank.pkcs11caller.SlotEventThread;
+import ru.rutoken.demobank.pkcs11caller.Utils;
 import ru.rutoken.demobank.pkcs11caller.exception.Pkcs11CallerException;
 import ru.rutoken.demobank.pkcs11caller.exception.Pkcs11Exception;
 import ru.rutoken.pkcs11jna.CK_ATTRIBUTE;
 import ru.rutoken.pkcs11jna.CK_C_INITIALIZE_ARGS;
+import ru.rutoken.pkcs11jna.CK_SLOT_INFO;
 import ru.rutoken.pkcs11jna.CK_TOKEN_INFO;
 import ru.rutoken.pkcs11jna.CK_TOKEN_INFO_EXTENDED;
 import ru.rutoken.pkcs11jna.Pkcs11Constants;
 import ru.rutoken.pkcs11jna.RtPkcs11;
 import ru.rutoken.pkcs11jna.RtPkcs11Constants;
+import org.json.JSONArray;
 
 import ru.rutoken.demobank.pkcs11caller.Token;
 import ru.rutoken.demobank.pkcs11caller.TokenManager;
+
+//import static ru.rutoken.demobank.pkcs11caller.TokenManagerEvent.EventType.SLOT_ADDED;
+//import static ru.rutoken.demobank.pkcs11caller.TokenManagerEvent.EventType.SLOT_REMOVED;
+
+//import static ru.rutoken.demobank.pkcs11caller.TokenManagerEvent.EventType.SLOT_EVENT_THREAD_FAILED;
 
 public class RutokenPlugin extends CordovaPlugin {
 
@@ -112,7 +122,7 @@ public class RutokenPlugin extends CordovaPlugin {
 
         Context context = this.cordova.getActivity().getApplicationContext();
 
-        if (action.equals("init")) {
+        if (action.equals("getTokens")) {
             try {
                 NativeLong rv;
 
@@ -130,22 +140,49 @@ public class RutokenPlugin extends CordovaPlugin {
 
                 Log.v("V","in 4");
 
-                //for (int i = 0; i != slotCount.getValue().intValue(); ++i) {
+                JSONArray jsonArrResult = new JSONArray();
+
+                for (int i = 0; i != slotCount.getValue().intValue(); ++i) {
                     Log.v(getClass().getName(), "yeee find");
                     Log.v(getClass().getName(), slotIds[0].toString());
 
-                   // RtPkcs11Library.getInstance().C_Finalize(null);
+                    JSONObject jsonObjResult = new JSONObject();
 
-                    if(slotIds.length <= 0 || slotCount.getValue().intValue() <= 0){
-                        callbackContext.error("Token not found");
-                        return false;
-                    }
+                    CK_SLOT_INFO slotInfo = new CK_SLOT_INFO();
+                    NativeLong rvl;
 
-                    callbackContext.success(slotIds[0].toString());
-                    return true;
-                    //slotEventHappened(slotIds[i]);
-                    //callbackContext.error(slotIds[i].toString());
-                //}
+                    rvl = RtPkcs11Library.getInstance().C_GetSlotInfo(slotIds[i], slotInfo);
+                    Pkcs11Exception.throwIfNotOk(rvl);
+
+                    jsonObjResult.put("slotId", slotIds[i].toString());
+
+                    final CK_TOKEN_INFO tokenInfo = new CK_TOKEN_INFO();
+                    Pkcs11Exception.throwIfNotOk(
+                            RtPkcs11Library.getInstance().C_GetTokenInfo(slotIds[0], tokenInfo));
+
+                    String mLabel = Utils.removeTrailingSpaces(tokenInfo.label);
+                    String mModel = Utils.removeTrailingSpaces(tokenInfo.model);
+                    String mSerialNumber = Utils.removeTrailingSpaces(tokenInfo.serialNumber);
+                    long decSerial = Long.parseLong(mSerialNumber, 16);
+                    String decSerialString = String.valueOf(decSerial);
+                    String mShortDecSerialNumber = String.valueOf(decSerial % 100000);
+
+                    jsonObjResult.put("label", mLabel);
+                    jsonObjResult.put("model", mModel);
+                    jsonObjResult.put("serialNumber", mSerialNumber);
+                    jsonObjResult.put("decSerial", decSerialString);
+                    jsonObjResult.put("shortDecSerialNumber", mShortDecSerialNumber);
+
+                    jsonArrResult.put(jsonObjResult);
+                }
+
+                /*if(slotIds.length <= 0 || slotCount.getValue().intValue() <= 0){
+                    callbackContext.error("Token not found");
+                    return false;
+                }*/
+
+                callbackContext.success(jsonArrResult.toString());
+                return true;
 
             } catch (Exception e) {
                 callbackContext.error("token error ex.");
@@ -157,6 +194,77 @@ public class RutokenPlugin extends CordovaPlugin {
 
             //callbackContext.error("Token not found");
             //return false;
+
+        }else if(action.equals("waitForSlotEvent")){
+
+            NativeLongByReference slotId = new NativeLongByReference();
+            NativeLong rv;
+
+            rv = RtPkcs11Library.getInstance().C_WaitForSlotEvent(new NativeLong(0), slotId, null);
+
+            if (rv.longValue() == Pkcs11Constants.CKR_CRYPTOKI_NOT_INITIALIZED) {
+                Log.d("waitForSlotEvent", "Exit " + slotId.getValue().toString());
+                callbackContext.error("Token CKR_CRYPTOKI_NOT_INITIALIZED");
+                return false;
+            }
+
+            try {
+                String jsonResult = "";
+
+                Pkcs11Exception.throwIfNotOk(rv);
+                Log.d("waitForSlotEvent", "find slot id" + slotId.getValue().toString());
+
+                CK_SLOT_INFO slotInfo = new CK_SLOT_INFO();
+                NativeLong rvl;
+
+                rvl = RtPkcs11Library.getInstance().C_GetSlotInfo(slotId.getValue(), slotInfo);
+                Pkcs11Exception.throwIfNotOk(rvl);
+
+                JSONObject jsonObjResult = new JSONObject();
+                JSONObject jsonObjTokenInfo = new JSONObject();
+
+
+                jsonObjResult.put("slotId", slotId.getValue().toString());
+
+                if ((Pkcs11Constants.CKF_TOKEN_PRESENT & slotInfo.flags.longValue()) != 0x00) {
+                    jsonObjResult.put("event", "add");
+                    Log.d("waitForSlotEvent", "add");
+
+                    final CK_TOKEN_INFO tokenInfo = new CK_TOKEN_INFO();
+                    Pkcs11Exception.throwIfNotOk(
+                            RtPkcs11Library.getInstance().C_GetTokenInfo(slotId.getValue(), tokenInfo));
+
+                    String mLabel = Utils.removeTrailingSpaces(tokenInfo.label);
+                    String mModel = Utils.removeTrailingSpaces(tokenInfo.model);
+                    String mSerialNumber = Utils.removeTrailingSpaces(tokenInfo.serialNumber);
+                    long decSerial = Long.parseLong(mSerialNumber, 16);
+                    String decSerialString = String.valueOf(decSerial);
+                    String mShortDecSerialNumber = String.valueOf(decSerial % 100000);
+
+                    jsonObjTokenInfo.put("label", mLabel);
+                    jsonObjTokenInfo.put("model", mModel);
+                    jsonObjTokenInfo.put("serialNumber", mSerialNumber);
+                    jsonObjTokenInfo.put("decSerial", decSerialString);
+                    jsonObjTokenInfo.put("shortDecSerialNumber", mShortDecSerialNumber);
+                    //new SlotEventThread.SlotEvent(slotId, slotInfo)
+
+                } else {
+                    Log.d("waitForSlotEvent", "remove");
+                    jsonObjResult.put("event", "remove");
+                }
+
+                jsonObjResult.put("tokenInfo", jsonObjTokenInfo);
+
+                jsonResult = jsonObjResult.toString();
+
+                callbackContext.success(jsonResult);
+                return true;
+                //addSlot();
+            } catch (Exception e) {
+                //TokenManager.getInstance().postEvent(new TokenManagerEvent(SLOT_EVENT_THREAD_FAILED));
+                callbackContext.error("slot error");
+                return false;
+            }
 
         }else if(action.equals("getTokenInfo")){
             try {
@@ -184,16 +292,35 @@ public class RutokenPlugin extends CordovaPlugin {
                     Log.v(getClass().getName(), tokenInfo.serialNumber.toString());
 
 
-                } catch (Pkcs11CallerException e) {
-                    e.printStackTrace();
 
+                    /*try{
+                        final Token token = new Token(slotId, tokenInfo,false, RtPkcs11Library.getInstance());
+                    }catch (Exception e){
+
+                    }
+
+
+
+                    try (Token.Session session = new Token.Session(slotId)) {
+                        Certificate.CertificateCategory[] supportedCategories = {Certificate.CertificateCategory.UNSPECIFIED, Certificate.CertificateCategory.USER};
+                        for (Certificate.CertificateCategory category : supportedCategories) {
+                            mCertificateMap.putAll(getCertificatesWithCategory(category, session.get()));
+                        }
+                    }*/
+
+
+
+                    callbackContext.success("success");
+                    return true;
+
+                } catch (Pkcs11CallerException e) {
+                    callbackContext.error(e.getMessage());
+                    return false;
                 }
-                return true;
             }catch (Exception e){
                 callbackContext.error(e.getMessage());
                 return false;
             }
-
         }
 
         callbackContext.error("method not found");
@@ -201,9 +328,9 @@ public class RutokenPlugin extends CordovaPlugin {
     }
 
 
-    @Override public void onStop () {
+    @Override public void onDestroy () {
         Log.v("CryptoproPlugin","af ==> ______________ onStop");
-        super.onStop();
+        super.onDestroy();
         RtPkcs11Library.getInstance().C_Finalize(null);
         Log.v("CryptoproPlugin","==> ______________ onStop");
     };
