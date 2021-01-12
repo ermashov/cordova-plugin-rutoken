@@ -63,10 +63,8 @@ public class Utils {
         template[1].pValue = Native.getDirectBufferPointer(idBuffer);
         template[1].ulValueLen = new NativeLong(id.length);
         try {
-            Log.v("TAG findKey", new String(id));
             return findObject(pkcs11, session, template);
         } catch (ObjectNotFoundException e) {
-            Log.v("TAG findKey error", new String(id));
             throw new KeyNotFoundException();
         }
     }

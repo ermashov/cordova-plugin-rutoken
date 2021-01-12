@@ -22,6 +22,22 @@ Rutoken.prototype.cmsSign = function(params, success, fail) {
         params.data,
     ]);
 };
+Rutoken.prototype.cmsEncrypt = function(params, success, fail) {
+    cordova.exec(success, fail, 'RutokenPlugin', 'cmsEncrypt', [
+        params.slotId,
+        params.pin,
+        params.ckaId,
+        params.data,
+    ]);
+};
+Rutoken.prototype.cmsDecrypt = function(params, success, fail) {
+    cordova.exec(success, fail, 'RutokenPlugin', 'cmsDecrypt', [
+        params.slotId,
+        params.pin,
+        params.ckaId,
+        params.data,
+    ]);
+};
 
 if (!window.plugins) {
     window.plugins = {};
@@ -33,4 +49,3 @@ if (!window.plugins.rutoken) {
 if (module.exports) {
     module.exports = Rutoken;
 }
-

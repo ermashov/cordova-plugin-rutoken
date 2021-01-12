@@ -9,7 +9,7 @@ import ru.rutoken.pkcs11jna.RtPkcs11Constants;
 class RSADigest extends Pkcs11Digest {
 
     RSADigest(Pkcs11 pkcs11, long sessionHandle) {
-        super(pkcs11, sessionHandle, Pkcs11Constants.CKM_SHA_1);
+        super(pkcs11, sessionHandle, Pkcs11Constants.CKM_SHA256);
     }
 
     @Override

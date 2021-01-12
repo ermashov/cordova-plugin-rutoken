@@ -155,8 +155,6 @@ public class GostKeyPair {
     public long getPrivateKeyHandle(Pkcs11 pkcs11, long session)
             throws Pkcs11CallerException {
 
-        Log.v("TAG", "getPrivateKeyHandle=" + new String(mId));
-
         long privateKeyHandle  = findKey(pkcs11, session, mId, true);
 
         return privateKeyHandle;
