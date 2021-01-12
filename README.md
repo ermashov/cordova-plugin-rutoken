@@ -2,7 +2,6 @@
 
 
 ##Method getTokens 
-
 ```
 window.plugins.rutoken.getTokens(
     function(tokens){
@@ -16,8 +15,7 @@ window.plugins.rutoken.getTokens(
 );
 ```
 
-#Method waitForSlotEvent 
-###Event token connect/ disconnect
+#Method waitForSlotEvent (Event token connect/ disconnect)
 ```
 window.plugins.rutoken.waitForSlotEvent(
     function(event){
@@ -57,6 +55,40 @@ window.plugins.rutoken.cmsSign({
     },
     function(cmsSign){
         console.log(cmsSign);
+    },
+    function(error){
+        alert(error)
+    }
+);
+```
+
+#Method cmsEncrypt
+```
+window.plugins.rutoken.cmsEncrypt({
+        slotId: '"slotId" from function "getTokens" or "waitForSlotEvent"',
+        pin:'',
+        ckaId:'"Cka Id" from function "getCertificates"',
+        data:'hello',
+    },
+    function(encData){
+        console.log(encData);
+    },
+    function(error){
+        alert(error)
+    }
+);
+```
+
+#Method cmsDecrypt
+```
+ window.plugins.rutoken.cmsDecrypt({
+        slotId: '"slotId" from function "getTokens" or "waitForSlotEvent"',
+        pin:'',
+        ckaId:'"Cka Id" from function "getCertificates"',
+        data:encData,
+    },
+    function(data){
+        console.log(data);
     },
     function(error){
         alert(error)
