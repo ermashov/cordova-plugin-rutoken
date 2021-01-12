@@ -26,6 +26,7 @@
         <source-file src="src/ru/rutoken/bcprovider/digest/GostR3411_2012_256Digest.java" target-dir="src/ru/rutoken/bcprovider/digest/" />
         <source-file src="src/ru/rutoken/bcprovider/digest/GostR3411_2012_512Digest.java" target-dir="src/ru/rutoken/bcprovider/digest/" />
         <source-file src="src/ru/rutoken/bcprovider/digest/Pkcs11Digest.java" target-dir="src/ru/rutoken/bcprovider/digest/" />
+        <source-file src="src/ru/rutoken/bcprovider/digest/RSADigest.java" target-dir="src/ru/rutoken/bcprovider/digest/" />
         <source-file src="src/ru/rutoken/bcprovider/CmsSigner.java" target-dir="src/ru/rutoken/bcprovider/" />
         <source-file src="src/ru/rutoken/bcprovider/DigestProvider.java" target-dir="src/ru/rutoken/bcprovider/" />
         <source-file src="src/ru/rutoken/bcprovider/GostContentSigner.java" target-dir="src/ru/rutoken/bcprovider/" />
@@ -42,6 +43,7 @@
         <source-file src="src/ru/rutoken/pkcs11caller/signature/GostR3410_2001Signature.java" target-dir="src/ru/rutoken/pkcs11caller/signature/" />
         <source-file src="src/ru/rutoken/pkcs11caller/signature/GostR3410_2012_256Signature.java" target-dir="src/ru/rutoken/pkcs11caller/signature/" />
         <source-file src="src/ru/rutoken/pkcs11caller/signature/GostR3410_2012_512Signature.java" target-dir="src/ru/rutoken/pkcs11caller/signature/" />
+        <source-file src="src/ru/rutoken/pkcs11caller/signature/RSASignature.java" target-dir="src/ru/rutoken/pkcs11caller/signature/" />
         <source-file src="src/ru/rutoken/pkcs11caller/signature/Signature.java" target-dir="src/ru/rutoken/pkcs11caller/signature/" />
         <source-file src="src/ru/rutoken/pkcs11caller/Certificate.java" target-dir="src/ru/rutoken/pkcs11caller/" />
         <source-file src="src/ru/rutoken/pkcs11caller/CertificateAndGostKeyPair.java" target-dir="src/ru/rutoken/pkcs11caller/" />
