@@ -1,6 +1,9 @@
 cordova.define("cordova-plugin-rutoken.Rutoken", function(require, exports, module) {
     var Rutoken = function() {};
 
+    Rutoken.prototype.getTokens = function(success, fail) {
+        cordova.exec(success, fail, 'RutokenPlugin', 'getTokens', []);
+    };
 
     Rutoken.prototype.waitForSlotEvent = function(success, fail) {
         cordova.exec(success, fail, 'RutokenPlugin', 'waitForSlotEvent', []);
@@ -12,13 +15,12 @@ cordova.define("cordova-plugin-rutoken.Rutoken", function(require, exports, modu
         ]);
     };
 
-    Rutoken.prototype.getTokens = function(success, fail) {
-        cordova.exec(success, fail, 'RutokenPlugin', 'getTokens', []);
-    };
-
-    Rutoken.prototype.getTokenInfo = function(params, success, fail) {
-        cordova.exec(success, fail, 'RutokenPlugin', 'getTokenInfo', [
+    Rutoken.prototype.cmsSign = function(params, success, fail) {
+        cordova.exec(success, fail, 'RutokenPlugin', 'cmsSign', [
             params.slotId,
+            params.pin,
+            params.ckaId,
+            params.data,
         ]);
     };
 
