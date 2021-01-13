@@ -202,7 +202,7 @@ public class RutokenPlugin extends CordovaPlugin {
                             JSONObject jsonObjResult = new JSONObject();
                             JSONObject jsonObjTokenInfo = new JSONObject();
 
-                            jsonObjResult.put("slotId", slotId.getValue().toString());
+                            jsonObjTokenInfo.put("slotId", slotId.getValue().toString());
 
                             if ((Pkcs11Constants.CKF_TOKEN_PRESENT & slotInfo.flags.longValue()) != 0x00) {
 
@@ -337,6 +337,156 @@ public class RutokenPlugin extends CordovaPlugin {
                 mRtPkcs11.C_Logout(session);
                 closeSession(session);
                 callbackContext.success( Base64.encodeToString(signer.finishSignature(), Base64.NO_WRAP));
+                return true;
+
+            }catch (Exception e){
+                callbackContext.error(e.getMessage());
+                return false;
+            }
+
+        }else if(action.equals("cmsEncrypt")){
+            RtPkcs11 mRtPkcs11 = RtPkcs11Library.getInstance();
+            try {
+                NativeLong slotId = new NativeLong(args.getInt(0));
+                String pin = args.getString(1);
+                String ckaId = args.getString(2);
+                String pData = args.getString(3);
+
+                String pinToUse = pin.length() > 0 ? pin : "";
+
+                NativeLong session = openSession(slotId);
+
+                NativeLong rvcl = mRtPkcs11.C_Login(session, new NativeLong(Pkcs11Constants.CKU_USER),
+                        pinToUse.getBytes(), new NativeLong(pinToUse.length()));
+                Pkcs11Exception.throwIfNotOk(rvcl);
+
+                CertificateAndGostKeyPair cert = getCertificateByCkaId(ckaId, session);
+                long hPubKey = cert.getGostKeyPair().getPubKeyHandle();
+
+                CK_MECHANISM ckm = new CK_MECHANISM(new NativeLong(Pkcs11Constants.CKM_RSA_PKCS),null, new NativeLong(0));
+                NativeLong rvE = mRtPkcs11.C_EncryptInit(session, ckm, new NativeLong(hPubKey));
+                Pkcs11Exception.throwIfNotOk(rvE);
+
+                byte[] pbtData = pData.getBytes();
+                final NativeLongByReference ulEncryptedDataSize = new NativeLongByReference();
+                rvE = mRtPkcs11.C_Encrypt(session, pbtData,  new NativeLong(pbtData.length), null, ulEncryptedDataSize);
+                Pkcs11Exception.throwIfNotOk(rvE);
+
+                final byte[] pbtEncryptedData = new byte[ulEncryptedDataSize.getValue().intValue()];
+                rvE = mRtPkcs11.C_Encrypt(session, pbtData,  new NativeLong(pbtData.length), pbtEncryptedData, ulEncryptedDataSize);
+                Pkcs11Exception.throwIfNotOk(rvE);
+
+                mRtPkcs11.C_Logout(session);
+                closeSession(session);
+
+                callbackContext.success( Base64.encodeToString(pbtEncryptedData, Base64.NO_WRAP));
+                return true;
+
+            }catch (Exception e){
+                callbackContext.error(e.getMessage());
+                return false;
+            }
+
+        }else if(action.equals("cmsDecrypt")){
+            RtPkcs11 mRtPkcs11 = RtPkcs11Library.getInstance();
+            try {
+                NativeLong slotId = new NativeLong(args.getInt(0));
+                String pin = args.getString(1);
+                String ckaId = args.getString(2);
+                String pData = args.getString(3);
+
+                String pinToUse = pin.length() > 0 ? pin : "";
+
+                NativeLong session = openSession(slotId);
+
+                NativeLong rvcl = mRtPkcs11.C_Login(session, new NativeLong(Pkcs11Constants.CKU_USER),
+                        pinToUse.getBytes(), new NativeLong(pinToUse.length()));
+                Pkcs11Exception.throwIfNotOk(rvcl);
+
+                CertificateAndGostKeyPair cert = getCertificateByCkaId(ckaId, session);
+                long hPrivateKey =  cert.getGostKeyPair().getPrivateKeyHandle(mRtPkcs11, session.longValue());
+
+                CK_MECHANISM ckm = new CK_MECHANISM(new NativeLong(Pkcs11Constants.CKM_RSA_PKCS),null, new NativeLong(0));
+
+                byte[] pbtEncryptedData = Base64.decode(pData, Base64.NO_WRAP);
+
+                NativeLong rv = mRtPkcs11.C_DecryptInit(session, ckm, new NativeLong(hPrivateKey));
+                Pkcs11Exception.throwIfNotOk(rv);
+
+                final NativeLongByReference ulDecryptedDataSize = new NativeLongByReference();
+
+                rv = mRtPkcs11.C_Decrypt(session, pbtEncryptedData,  new NativeLong(pbtEncryptedData.length), null, ulDecryptedDataSize);
+                Pkcs11Exception.throwIfNotOk(rv);
+
+                final byte[] pbtDecryptedData = new byte[ulDecryptedDataSize.getValue().intValue()];
+                rv = mRtPkcs11.C_Decrypt(session, pbtEncryptedData,  new NativeLong(pbtEncryptedData.length), pbtDecryptedData, ulDecryptedDataSize);
+                Pkcs11Exception.throwIfNotOk(rv);
+
+                mRtPkcs11.C_Logout(session);
+                closeSession(session);
+                callbackContext.success(new String(pbtDecryptedData));
+                return true;
+
+            }catch (Exception e){
+                callbackContext.error(e.getMessage());
+                return false;
+            }
+
+        }else if(action.equals("cmsDecrypts")){
+            RtPkcs11 mRtPkcs11 = RtPkcs11Library.getInstance();
+            try {
+                NativeLong slotId = new NativeLong(args.getInt(0));
+                String pin = args.getString(1);
+                String ckaId = args.getString(2);
+                String data = args.getString(3);
+                String[] arData = data.split(",");
+
+                String pinToUse = pin.length() > 0 ? pin : "";
+
+                NativeLong session = openSession(slotId);
+
+                NativeLong rvcl = mRtPkcs11.C_Login(session, new NativeLong(Pkcs11Constants.CKU_USER),
+                        pinToUse.getBytes(), new NativeLong(pinToUse.length()));
+                Pkcs11Exception.throwIfNotOk(rvcl);
+
+                CertificateAndGostKeyPair cert = getCertificateByCkaId(ckaId, session);
+                long hPrivateKey =  cert.getGostKeyPair().getPrivateKeyHandle(mRtPkcs11, session.longValue());
+
+                CK_MECHANISM ckm = new CK_MECHANISM(new NativeLong(Pkcs11Constants.CKM_RSA_PKCS),null, new NativeLong(0));
+
+
+                String resultData = "";
+
+                Log.v("Encrypt pData length", String.valueOf(arData.length));
+
+                Integer i = 0;
+                for (String pData : arData){
+
+                    Log.v("Encrypt pData", pData);
+
+                    byte[] pbtEncryptedData = Base64.decode(pData, Base64.NO_WRAP);
+
+                    Log.v("Encrypt", "1");
+                    NativeLong rv = mRtPkcs11.C_DecryptInit(session, ckm, new NativeLong(hPrivateKey));
+                    Pkcs11Exception.throwIfNotOk(rv);
+
+                    Log.v("Encrypt", "2");
+                    final NativeLongByReference ulDecryptedDataSize = new NativeLongByReference();
+                    rv = mRtPkcs11.C_Decrypt(session, pbtEncryptedData,  new NativeLong(pbtEncryptedData.length), null, ulDecryptedDataSize);
+                    Pkcs11Exception.throwIfNotOk(rv);
+                    Log.v("Encrypt", "3");
+                    final byte[] pbtDecryptedData = new byte[ulDecryptedDataSize.getValue().intValue()];
+                    rv = mRtPkcs11.C_Decrypt(session, pbtEncryptedData,  new NativeLong(pbtEncryptedData.length), pbtDecryptedData, ulDecryptedDataSize);
+                    Pkcs11Exception.throwIfNotOk(rv);
+
+                    Log.v("Encrypt", "end item");
+                    resultData += (i > 0 ? ",":"") + Base64.encodeToString(pbtDecryptedData, Base64.NO_WRAP);
+                    i++;
+                }
+
+                mRtPkcs11.C_Logout(session);
+                closeSession(session);
+                callbackContext.success(resultData);
                 return true;
 
             }catch (Exception e){
@@ -503,7 +653,6 @@ public class RutokenPlugin extends CordovaPlugin {
         Log.v("CryptoproPlugin","af ==> ______________ onStop");
         super.onDestroy();
         RtPkcs11Library.getInstance().C_Finalize(null);
-        Log.v("CryptoproPlugin","==> ______________ onStop");
     };
 
     /*
