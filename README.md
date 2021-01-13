@@ -1,7 +1,7 @@
 # cordova-plugin-rutoken
 
 
-##Method getTokens 
+#Method getTokens 
 ```
 window.plugins.rutoken.getTokens(
     function(tokens){
