@@ -52,6 +52,7 @@
         <source-file src="src/ru/rutoken/pkcs11caller/KeyPair.java" target-dir="src/ru/rutoken/pkcs11caller/" />
         <source-file src="src/ru/rutoken/pkcs11caller/GostOids.java" target-dir="src/ru/rutoken/pkcs11caller/" />
         <source-file src="src/ru/rutoken/pkcs11caller/Pkcs11Result.java" target-dir="src/ru/rutoken/pkcs11caller/" />
+        <source-file src="src/ru/rutoken/pkcs11caller/RsaKeyTransEnvelopedRecipient.java" target-dir="src/ru/rutoken/pkcs11caller/" />
         <source-file src="src/ru/rutoken/pkcs11caller/RtPkcs11Library.java" target-dir="src/ru/rutoken/pkcs11caller/" />
         <source-file src="src/ru/rutoken/pkcs11caller/SlotEventThread.java" target-dir="src/ru/rutoken/pkcs11caller/" />
         <source-file src="src/ru/rutoken/pkcs11caller/Token.java" target-dir="src/ru/rutoken/pkcs11caller/" />

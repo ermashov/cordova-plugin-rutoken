@@ -57,6 +57,7 @@ public class Utils {
         template[0].type = new NativeLong(Pkcs11Constants.CKA_CLASS);
         template[0].pValue = keyClass.getPointer();
         template[0].ulValueLen = new NativeLong(NativeLong.SIZE);
+
         ByteBuffer idBuffer = ByteBuffer.allocateDirect(id.length);
         idBuffer.put(id);
         template[1].type = new NativeLong(Pkcs11Constants.CKA_ID);

@@ -36,6 +36,7 @@ public class GostKeyPair {
     private final byte[] mId;
     private final Signature.Type mKeyType;
     private final long mPubKeyHandle;
+    private final long mPrivKeyHandle;
 
     private GostKeyPair(Pkcs11 pkcs11, long session, byte[] keyValue,  byte[] ckaId) throws Pkcs11CallerException {
         // уберём заголовок ключа (см ASN.1 Basic Encoding Rules)
@@ -68,6 +69,7 @@ public class GostKeyPair {
 
         try {
             mPubKeyHandle = findObject(pkcs11, session, pubKeyTemplate);
+
         } catch (ObjectNotFoundException e) {
             throw new KeyNotFoundException();
         }
@@ -89,6 +91,7 @@ public class GostKeyPair {
 
         mId = idTemplate[0].pValue.getByteArray(0, idTemplate[0].ulValueLen.intValue());
 
+        mPrivKeyHandle  = findKey(pkcs11, session, mId, true);
     }
 
     public static GostKeyPair getGostKeyPairByCertificate(Pkcs11 pkcs11, long session, X509CertificateHolder certificateHolder,  byte[] ckaId)
@@ -161,6 +164,10 @@ public class GostKeyPair {
     }
     public long getPubKeyHandle(){
         return mPubKeyHandle;
+    }
+
+    public long getPrivKeyHandle(){
+        return mPrivKeyHandle;
     }
 
     public Signature.Type getKeyType() {
