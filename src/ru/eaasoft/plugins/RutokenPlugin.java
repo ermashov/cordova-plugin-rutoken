@@ -9,6 +9,7 @@ import org.bouncycastle.asn1.x500.AttributeTypeAndValue;
 import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.X500NameStyle;
+import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.RFC4519Style;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
@@ -305,6 +306,13 @@ public class RutokenPlugin extends CordovaPlugin {
                     JSONObject jsonObjectSubject = new JSONObject();
                     x500NameStyle = RFC4519Style.INSTANCE;
                     x500name =  entry.getValue().getCertificate().getCertificateHolder().getSubject();
+
+                    for (RDN emails : x500name.getRDNs(BCStyle.EmailAddress)) {
+                        for (AttributeTypeAndValue emailAttr : emails.getTypesAndValues()) {
+                            jsonObjectSubject.put("Email",  emailAttr.getValue());
+                        }
+                    }
+
                     rdns = x500name.getRDNs();
                     for ( RDN rdn : rdns ) {
                         for ( AttributeTypeAndValue attribute : rdn.getTypesAndValues() ) {
@@ -332,24 +340,27 @@ public class RutokenPlugin extends CordovaPlugin {
         }
         else if(action.equals("cmsSign"))
         {
-            RtPkcs11 mRtPkcs11 = RtPkcs11Library.getInstance();
             try {
-                NativeLong slotId = new NativeLong(args.getInt(0));
-                String pin = args.getString(1);
-                String ckaId = args.getString(2);
-                String pData = args.getString(3);
 
-                String pinToUse = pin.length() > 0 ? pin : "";
+                String ckaId = args.getString(0);
+                String pData = args.getString(1);
 
                 //NativeLong session = openSession(slotId);
                 NativeLong session = mSession;
 
-                NativeLong rvcl = mRtPkcs11.C_Login(session, new NativeLong(Pkcs11Constants.CKU_USER),
-                        pinToUse.getBytes(), new NativeLong(pinToUse.length()));
-                Pkcs11Exception.throwIfNotOk(rvcl);
+                CertificateAndGostKeyPair cert = null;
+                Log.v("Cert", "1");
+                for (Map.Entry<String, CertificateAndGostKeyPair> entry: mCertificateGostMap.entrySet()){
+                    Log.v("ckaId item", new String(entry.getValue().getCertificate().getCkaId()));
+                    if(new String(entry.getValue().getCertificate().getCkaId()).equals(ckaId)){
+                        cert = entry.getValue();
+                    }
+                }
+                Log.v("ckaId", ckaId);
+                Log.v("Cert", "3");
 
-                CertificateAndGostKeyPair cert = getCertificateByCkaId(ckaId, session);
-                long hPrivateKey =  cert.getGostKeyPair().getPrivateKeyHandle(mRtPkcs11, session.longValue());
+                long hPrivateKey =  cert.getGostKeyPair().getPrivKeyHandle();
+
                 byte[] data = pData.getBytes();
                 final CmsSigner signer = new CmsSigner(cert.getGostKeyPair().getKeyType(), session.longValue());
                 try (OutputStream stream = signer.initSignature(hPrivateKey, cert.getCertificate().getCertificateHolder(), true)) {
@@ -358,7 +369,6 @@ public class RutokenPlugin extends CordovaPlugin {
                     callbackContext.error(e.getMessage());
                 }
 
-                mRtPkcs11.C_Logout(session);
                 //closeSession(session);
                 callbackContext.success( Base64.encodeToString(signer.finishSignature(), Base64.NO_WRAP));
                 return true;

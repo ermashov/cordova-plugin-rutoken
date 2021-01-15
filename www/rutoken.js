@@ -16,8 +16,6 @@ Rutoken.prototype.getCertificates = function(params, success, fail) {
 
 Rutoken.prototype.cmsSign = function(params, success, fail) {
     cordova.exec(success, fail, 'RutokenPlugin', 'cmsSign', [
-        params.slotId,
-        params.pin,
         params.ckaId,
         params.data,
     ]);
