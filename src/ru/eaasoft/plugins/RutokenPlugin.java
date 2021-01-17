@@ -5,25 +5,43 @@ import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.PluginResult;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.DERNull;
+import org.bouncycastle.asn1.nist.NISTObjectIdentifiers;
+import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
 import org.bouncycastle.asn1.x500.AttributeTypeAndValue;
 import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.X500NameStyle;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.RFC4519Style;
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
+import org.bouncycastle.asn1.x509.DigestInfo;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import org.bouncycastle.cms.CMSAlgorithm;
 import org.bouncycastle.cms.CMSEnvelopedData;
 import org.bouncycastle.cms.CMSEnvelopedDataGenerator;
 import org.bouncycastle.cms.CMSException;
 import org.bouncycastle.cms.CMSProcessableByteArray;
+import org.bouncycastle.cms.CMSSignedData;
+import org.bouncycastle.cms.CMSSignedDataGenerator;
+import org.bouncycastle.cms.CMSTypedData;
 import org.bouncycastle.cms.RecipientInformation;
 import org.bouncycastle.cms.RecipientInformationStore;
+import org.bouncycastle.cms.SignerInfoGeneratorBuilder;
 import org.bouncycastle.cms.jcajce.JceCMSContentEncryptorBuilder;
 import org.bouncycastle.cms.jcajce.JceKeyTransRecipientId;
 import org.bouncycastle.cms.jcajce.JceKeyTransRecipientInfoGenerator;
+import org.bouncycastle.crypto.Digest;
+import org.bouncycastle.crypto.digests.SHA256Digest;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.operator.ContentSigner;
+import org.bouncycastle.operator.DigestCalculator;
+import org.bouncycastle.operator.DigestCalculatorProvider;
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
 import org.json.JSONArray;
 
 import android.os.Build;
@@ -32,6 +50,7 @@ import android.util.Log;
 
 import com.sun.jna.Native;
 import com.sun.jna.NativeLong;
+import com.sun.jna.Pointer;
 import com.sun.jna.ptr.NativeLongByReference;
 
 import org.json.JSONObject;
@@ -39,9 +58,12 @@ import org.json.JSONObject;
 import android.content.Context;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.Security;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -52,6 +74,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import androidx.annotation.RequiresApi;
 import ru.rutoken.bcprovider.CmsSigner;
@@ -69,12 +92,12 @@ import ru.rutoken.pkcs11jna.CK_C_INITIALIZE_ARGS;
 import ru.rutoken.pkcs11jna.CK_MECHANISM;
 import ru.rutoken.pkcs11jna.CK_SLOT_INFO;
 import ru.rutoken.pkcs11jna.CK_TOKEN_INFO;
+import ru.rutoken.pkcs11jna.Pkcs11;
 import ru.rutoken.pkcs11jna.Pkcs11Constants;
 import ru.rutoken.pkcs11caller.RsaKeyTransEnvelopedRecipient;
 
 
 import ru.rutoken.pkcs11jna.RtPkcs11;
-
 //import static ru.rutoken.pkcs11caller.TokenManagerEvent.EventType.SLOT_ADDED;
 //import static ru.rutoken.pkcs11caller.TokenManagerEvent.EventType.SLOT_REMOVED;
 
@@ -349,28 +372,33 @@ public class RutokenPlugin extends CordovaPlugin {
                 NativeLong session = mSession;
 
                 CertificateAndGostKeyPair cert = null;
-                Log.v("Cert", "1");
                 for (Map.Entry<String, CertificateAndGostKeyPair> entry: mCertificateGostMap.entrySet()){
                     Log.v("ckaId item", new String(entry.getValue().getCertificate().getCkaId()));
                     if(new String(entry.getValue().getCertificate().getCkaId()).equals(ckaId)){
                         cert = entry.getValue();
                     }
                 }
+
+                if(cert == null)
+                    callbackContext.error("Certificate not found");
+
                 Log.v("ckaId", ckaId);
-                Log.v("Cert", "3");
 
                 long hPrivateKey =  cert.getGostKeyPair().getPrivKeyHandle();
-
                 byte[] data = pData.getBytes();
-                final CmsSigner signer = new CmsSigner(cert.getGostKeyPair().getKeyType(), session.longValue());
-                try (OutputStream stream = signer.initSignature(hPrivateKey, cert.getCertificate().getCertificateHolder(), true)) {
-                    stream.write(data);
-                } catch (IOException e) {
-                    callbackContext.error(e.getMessage());
-                }
+                DigestCalculatorProvider dg = new SimpleDigestCalculatorProvider(new SHA256DigestCalculator());
+                RsaContentSigner mRsaContentSigner = new RsaContentSigner(Pkcs11RsaSigner.SignAlgorithm.RSASHA256, session.longValue(), hPrivateKey);
+                CMSSignedDataGenerator generator = new CMSSignedDataGenerator();
+                generator.addCertificate(cert.getCertificate().getCertificateHolder());
+                generator.addSignerInfoGenerator(
+                        new SignerInfoGeneratorBuilder(dg)
+                        .build(mRsaContentSigner, cert.getCertificate().getCertificateHolder())
+                );
+                CMSTypedData cmsData = new CMSProcessableByteArray(data);
+                CMSSignedData attachedCmsSignature = generator.generate(cmsData, true);
 
                 //closeSession(session);
-                callbackContext.success( Base64.encodeToString(signer.finishSignature(), Base64.NO_WRAP));
+                callbackContext.success(Base64.encodeToString(attachedCmsSignature.getEncoded(), Base64.NO_WRAP));
                 return true;
 
             }catch (Exception e){
@@ -792,4 +820,159 @@ public class RutokenPlugin extends CordovaPlugin {
         RtPkcs11Library.getInstance().C_Finalize(null);
     };
 
+}
+
+
+class Pkcs11RsaSigner {
+    private final Pkcs11RsaSigner.SignAlgorithm mSignAlgorithm;
+    private final long mSessionHandle;
+    private final long mPrivateKeyHandle;
+
+    public Pkcs11RsaSigner(Pkcs11RsaSigner.SignAlgorithm signAlgorithm, long sessionHandle, long privateKeyHandle) {
+        mSignAlgorithm = signAlgorithm;
+        mSessionHandle = sessionHandle;
+        mPrivateKeyHandle = privateKeyHandle;
+    }
+
+    public Pkcs11RsaSigner.SignAlgorithm getSignAlgorithm() {
+        return mSignAlgorithm;
+    }
+
+    public byte[] sign(byte[] data) throws Pkcs11Exception {
+
+        final Pkcs11 pkcs11 =  RtPkcs11Library.getInstance();
+        final CK_MECHANISM mechanism = new CK_MECHANISM(new NativeLong(mSignAlgorithm.getPkcsMechanism()), Pointer.NULL, new NativeLong(0));
+        NativeLong rv = pkcs11.C_SignInit(new NativeLong(mSessionHandle), mechanism, new NativeLong(mPrivateKeyHandle));
+        Pkcs11Exception.throwIfNotOk(rv);
+
+        final NativeLongByReference count = new NativeLongByReference();
+        rv = pkcs11.C_Sign(new NativeLong(mSessionHandle), data, new NativeLong(data.length), null, count);
+        Pkcs11Exception.throwIfNotOk(rv);
+
+        final byte[] signature = new byte[count.getValue().intValue()];
+        rv = pkcs11.C_Sign(new NativeLong(mSessionHandle), data, new NativeLong(data.length), signature, count);
+        Pkcs11Exception.throwIfNotOk( rv);
+
+        return signature;
+    }
+
+    public enum SignAlgorithm {
+        RSASHA256(Pkcs11Constants.CKM_RSA_PKCS,
+                new AlgorithmIdentifier(PKCSObjectIdentifiers.rsaEncryption));
+
+        private final long mPkcsMechanism;
+        private final AlgorithmIdentifier mAlgorithmIdentifier;
+
+        SignAlgorithm(long pkcsMechanism, AlgorithmIdentifier algorithmIdentifier) {
+            mPkcsMechanism = pkcsMechanism;
+            mAlgorithmIdentifier = algorithmIdentifier;
+        }
+
+        public long getPkcsMechanism() {
+            return mPkcsMechanism;
+        }
+
+        public AlgorithmIdentifier getAlgorithmIdentifier() {
+            return mAlgorithmIdentifier;
+        }
+    }
+}
+
+class RsaContentSigner implements ContentSigner {
+    private final Pkcs11RsaSigner mPkcs11RsaSigner;
+    private final DigestCalculatorProvider mDigestCalculatorProvider;
+    private final ByteArrayOutputStream mStream = new ByteArrayOutputStream();
+
+    public RsaContentSigner(Pkcs11RsaSigner.SignAlgorithm signAlgorithm, long sessionHandle, long privateKeyHandle) {
+        mPkcs11RsaSigner = new Pkcs11RsaSigner(signAlgorithm, sessionHandle, privateKeyHandle);
+        mDigestCalculatorProvider = new SimpleDigestCalculatorProvider(new SHA256DigestCalculator());
+    }
+
+    @Override
+    public AlgorithmIdentifier getAlgorithmIdentifier() {
+        return mPkcs11RsaSigner.getSignAlgorithm().getAlgorithmIdentifier();
+    }
+
+    @Override
+    public OutputStream getOutputStream() {
+        return mStream;
+    }
+
+    @Override
+    public byte[] getSignature() {
+        byte[] data = mStream.toByteArray();
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(data);
+
+            byte[] signature = mPkcs11RsaSigner.sign(createDigestInfo(hash));
+            mStream.reset();
+            return signature;
+        } catch (Pkcs11Exception | NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static byte[] createDigestInfo(byte[] hash)
+    {
+        AlgorithmIdentifier algorithmIdentifier = new AlgorithmIdentifier(NISTObjectIdentifiers.id_sha256, DERNull.INSTANCE);
+        DigestInfo digestInfo = new DigestInfo(algorithmIdentifier, hash);
+
+        try {
+            return digestInfo.getEncoded();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public DigestCalculatorProvider getDigestCalculatorProvider() {
+        return mDigestCalculatorProvider;
+    }
+}
+
+class SimpleDigestCalculatorProvider implements DigestCalculatorProvider {
+    private final DigestCalculator mDigestCalculator;
+
+    SimpleDigestCalculatorProvider(DigestCalculator digestCalculator) {
+        mDigestCalculator = Objects.requireNonNull(digestCalculator);
+    }
+
+    @Override
+    public DigestCalculator get(AlgorithmIdentifier algorithmIdentifier) {
+        return mDigestCalculator;
+    }
+}
+
+class SHA256DigestCalculator
+        implements DigestCalculator
+{
+    private final ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+
+    public AlgorithmIdentifier getAlgorithmIdentifier()
+    {
+        return new AlgorithmIdentifier(NISTObjectIdentifiers.id_sha256);
+    }
+
+    public OutputStream getOutputStream()
+    {
+        return bOut;
+    }
+
+    public byte[] getDigest()
+    {
+        byte[] bytes = bOut.toByteArray();
+
+        bOut.reset();
+
+        Digest sha256 = new SHA256Digest();
+
+        sha256.update(bytes, 0, bytes.length);
+
+        byte[] digest = new byte[sha256.getDigestSize()];
+
+        sha256.doFinal(digest, 0);
+
+        return digest;
+    }
 }
