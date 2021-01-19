@@ -1,3 +1,4 @@
+
 var Rutoken = function() {};
 
 Rutoken.prototype.getTokens = function(success, fail) {
@@ -40,6 +41,12 @@ Rutoken.prototype.cmsDecrypts = function(params, success, fail) {
         params.data,
     ]);
 };
+Rutoken.prototype.cmsEncrypts = function(params, success, fail) {
+    cordova.exec(success, fail, 'RutokenPlugin', 'cmsEncrypts', [
+        params.certs,
+        params.data,
+    ]);
+};
 Rutoken.prototype.login = function(params, success, fail) {
     cordova.exec(success, fail, 'RutokenPlugin', 'login', [
         params.pin,
@@ -56,3 +63,4 @@ if (!window.plugins.rutoken) {
 if (module.exports) {
     module.exports = Rutoken;
 }
+

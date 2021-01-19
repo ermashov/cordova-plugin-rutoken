@@ -14,6 +14,7 @@ import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.X500NameStyle;
 import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.asn1.x500.style.IETFUtils;
 import org.bouncycastle.asn1.x500.style.RFC4519Style;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.DigestInfo;
@@ -206,7 +207,6 @@ public class RutokenPlugin extends CordovaPlugin {
                 callbackContext.error("token error ex.");
                 return false;
             }
-
         }
         else if(action.equals("waitForSlotEvent"))
         {
@@ -289,6 +289,104 @@ public class RutokenPlugin extends CordovaPlugin {
         }
         else if(action.equals("getCertificates"))
         {
+            cordova.getThreadPool().execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        //NativeLong slotId = new NativeLong(args.getInt(0));
+                        //NativeLong session = openSession(slotId);
+                        NativeLong session = mSession;
+
+                        //final HashMap<String, CertificateAndGostKeyPair> mCertificateGostMap = new HashMap<>();
+
+                        Certificate.CertificateCategory[] supportedCategories = {Certificate.CertificateCategory.UNSPECIFIED, Certificate.CertificateCategory.USER};
+
+                        for (Certificate.CertificateCategory category : supportedCategories) {
+                            Map<String, CertificateAndGostKeyPair> certMap =  getCertificatesWithCategoryGost(category, session);
+                            mCertificateGostMap.putAll(certMap);
+                        }
+
+
+                        JSONArray jsonArrResult = new JSONArray();
+
+                        for (Map.Entry<String, CertificateAndGostKeyPair> entry: mCertificateGostMap.entrySet()){
+
+                            JSONObject jsonObject = new JSONObject();
+
+                            jsonObject.put("Fingerprint",  entry.getKey());
+                            jsonObject.put("CkaId",  new String(entry.getValue().getCertificate().getCkaId()));
+
+                            JSONObject jsonObjectIssuer = new JSONObject();
+                            X500NameStyle x500NameStyle = RFC4519Style.INSTANCE;
+                            X500Name x500name =  entry.getValue().getCertificate().getCertificateHolder().getIssuer();
+
+                            jsonObjectIssuer.put("C",  IETFUtils.valueToString(x500name.getRDNs(BCStyle.C)[0].getFirst().getValue()));
+                            jsonObjectIssuer.put("ST",  IETFUtils.valueToString(x500name.getRDNs(BCStyle.ST)[0].getFirst().getValue()));
+                            jsonObjectIssuer.put("L",  IETFUtils.valueToString(x500name.getRDNs(BCStyle.L)[0].getFirst().getValue()));
+                            jsonObjectIssuer.put("O",  IETFUtils.valueToString(x500name.getRDNs(BCStyle.O)[0].getFirst().getValue()));
+                            jsonObjectIssuer.put("OU",  IETFUtils.valueToString(x500name.getRDNs(BCStyle.OU)[0].getFirst().getValue()));
+                            jsonObjectIssuer.put("CN",  IETFUtils.valueToString(x500name.getRDNs(BCStyle.CN)[0].getFirst().getValue()));
+
+                            /*
+                            RDN[] rdns = x500name.getRDNs();
+                            for ( RDN rdn : rdns ) {
+                                for ( AttributeTypeAndValue attribute : rdn.getTypesAndValues() ) {
+                                    String attrName = x500NameStyle.oidToDisplayName( attribute.getType() );
+                                    if(attrName != null && attrName.length() > 0)
+                                        jsonObjectIssuer.put( attrName.toUpperCase(),  attribute.getValue());
+                                }
+                            }*/
+
+
+                            jsonObject.put("Issuer",  jsonObjectIssuer);
+
+                            JSONObject jsonObjectSubject = new JSONObject();
+                            x500NameStyle = RFC4519Style.INSTANCE;
+                            x500name =  entry.getValue().getCertificate().getCertificateHolder().getSubject();
+
+                           /* for (RDN emails : x500name.getRDNs(BCStyle.EmailAddress)) {
+                                for (AttributeTypeAndValue emailAttr : emails.getTypesAndValues()) {
+                                    jsonObjectSubject.put("Email",  emailAttr.getValue());
+                                }
+                            }*/
+
+                            jsonObjectSubject.put("Email",  IETFUtils.valueToString(x500name.getRDNs(BCStyle.EmailAddress)[0].getFirst().getValue()));
+
+                            jsonObjectSubject.put("C",  IETFUtils.valueToString(x500name.getRDNs(BCStyle.C)[0].getFirst().getValue()));
+                            jsonObjectSubject.put("ST",  IETFUtils.valueToString(x500name.getRDNs(BCStyle.ST)[0].getFirst().getValue()));
+                            jsonObjectSubject.put("L",  IETFUtils.valueToString(x500name.getRDNs(BCStyle.L)[0].getFirst().getValue()));
+                            jsonObjectSubject.put("O",  IETFUtils.valueToString(x500name.getRDNs(BCStyle.O)[0].getFirst().getValue()));
+                            jsonObjectSubject.put("CN",  IETFUtils.valueToString(x500name.getRDNs(BCStyle.CN)[0].getFirst().getValue()));
+
+                            /*rdns = x500name.getRDNs();
+                            for ( RDN rdn : rdns ) {
+                                for ( AttributeTypeAndValue attribute : rdn.getTypesAndValues() ) {
+                                    String attrName = x500NameStyle.oidToDisplayName( attribute.getType() );
+                                    if(attrName != null && attrName.length() > 0)
+                                        jsonObjectSubject.put( attrName.toUpperCase(),  attribute.getValue());
+                                }
+                            }*/
+                            jsonObject.put("Subject",  jsonObjectSubject);
+                            Log.v("Pem", entry.getValue().getCertificate().getCertificatePem());
+                            jsonObject.put("Pem",  entry.getValue().getCertificate().getCertificatePem());
+                            jsonObject.put("SerialNumber", entry.getValue().getCertificate().getCertificateHolder().getSerialNumber().toString(16).toUpperCase());
+                            jsonArrResult.put(jsonObject);
+                        }
+
+                        //closeSession(session);
+
+                        PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, jsonArrResult.toString());
+                        //pluginResult.setKeepCallback(true);
+                        callbackContext.sendPluginResult(pluginResult);
+
+                    }catch (Exception e){
+                        callbackContext.error(e.getMessage());
+                    }
+                }
+            });
+
+            return true;
+            /*
             try {
                 //NativeLong slotId = new NativeLong(args.getInt(0));
                 //NativeLong session = openSession(slotId);
@@ -311,6 +409,7 @@ public class RutokenPlugin extends CordovaPlugin {
                     JSONObject jsonObject = new JSONObject();
 
                     jsonObject.put("Fingerprint",  entry.getKey());
+                    Log.v("cert", new String(entry.getValue().getCertificate().getCkaId()));
                     jsonObject.put("CkaId",  new String(entry.getValue().getCertificate().getCkaId()));
 
                     JSONObject jsonObjectIssuer = new JSONObject();
@@ -324,6 +423,8 @@ public class RutokenPlugin extends CordovaPlugin {
                                 jsonObjectIssuer.put( attrName.toUpperCase(),  attribute.getValue());
                         }
                     }
+
+
                     jsonObject.put("Issuer",  jsonObjectIssuer);
 
                     JSONObject jsonObjectSubject = new JSONObject();
@@ -345,6 +446,7 @@ public class RutokenPlugin extends CordovaPlugin {
                         }
                     }
                     jsonObject.put("Subject",  jsonObjectSubject);
+                    Log.v("Pem", entry.getValue().getCertificate().getCertificatePem());
                     jsonObject.put("Pem",  entry.getValue().getCertificate().getCertificatePem());
                     jsonObject.put("SerialNumber", entry.getValue().getCertificate().getCertificateHolder().getSerialNumber().toString(16).toUpperCase());
                     jsonArrResult.put(jsonObject);
@@ -359,11 +461,60 @@ public class RutokenPlugin extends CordovaPlugin {
                 callbackContext.error(e.getMessage());
                 return false;
             }
-
+            */
         }
         else if(action.equals("cmsSign"))
         {
-            try {
+            cordova.getThreadPool().execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+
+                        String ckaId = args.getString(0);
+                        String pData = args.getString(1);
+
+                        //NativeLong session = openSession(slotId);
+                        NativeLong session = mSession;
+
+                        CertificateAndGostKeyPair cert = null;
+                        for (Map.Entry<String, CertificateAndGostKeyPair> entry: mCertificateGostMap.entrySet()){
+                            Log.v("ckaId item", new String(entry.getValue().getCertificate().getCkaId()));
+                            if(new String(entry.getValue().getCertificate().getCkaId()).equals(ckaId)){
+                                cert = entry.getValue();
+                            }
+                        }
+
+                        if(cert == null)
+                            callbackContext.error("Certificate not found");
+
+                        Log.v("ckaId", ckaId);
+
+                        long hPrivateKey =  cert.getGostKeyPair().getPrivKeyHandle();
+                        byte[] data = pData.getBytes();
+                        DigestCalculatorProvider dg = new SimpleDigestCalculatorProvider(new SHA256DigestCalculator());
+                        RsaContentSigner mRsaContentSigner = new RsaContentSigner(Pkcs11RsaSigner.SignAlgorithm.RSASHA256, session.longValue(), hPrivateKey);
+                        CMSSignedDataGenerator generator = new CMSSignedDataGenerator();
+                        generator.addCertificate(cert.getCertificate().getCertificateHolder());
+                        generator.addSignerInfoGenerator(
+                                new SignerInfoGeneratorBuilder(dg)
+                                        .build(mRsaContentSigner, cert.getCertificate().getCertificateHolder())
+                        );
+                        CMSTypedData cmsData = new CMSProcessableByteArray(data);
+                        CMSSignedData attachedCmsSignature = generator.generate(cmsData, true);
+
+                        //closeSession(session);
+                        PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, Base64.encodeToString(attachedCmsSignature.getEncoded(), Base64.NO_WRAP));
+                        callbackContext.sendPluginResult(pluginResult);
+
+                    }catch (Exception e){
+                        callbackContext.error(e.getMessage());
+                    }
+                }
+
+            });
+            return true;
+
+            /*try {
 
                 String ckaId = args.getString(0);
                 String pData = args.getString(1);
@@ -404,7 +555,7 @@ public class RutokenPlugin extends CordovaPlugin {
             }catch (Exception e){
                 callbackContext.error(e.getMessage());
                 return false;
-            }
+            }*/
 
         }
         else if(action.equals("cmsEncrypt"))
@@ -432,10 +583,15 @@ public class RutokenPlugin extends CordovaPlugin {
                 CMSEnvelopedDataGenerator cmsEnvelopedDataGenerator = new CMSEnvelopedDataGenerator();
                 X509Certificate certificate = (X509Certificate) CertificateFactory.getInstance("X.509")
                         .generateCertificate(new ByteArrayInputStream(Base64.decode(hPubKey, Base64.NO_WRAP)));
+
                 cmsEnvelopedDataGenerator.addRecipientInfoGenerator(new JceKeyTransRecipientInfoGenerator(certificate));
+
                 CMSEnvelopedData cmsEnvelopedData = cmsEnvelopedDataGenerator.generate(new CMSProcessableByteArray(pData.getBytes()),
                         new JceCMSContentEncryptorBuilder(CMSAlgorithm.DES_CBC)
+                        //new JceCMSContentEncryptorBuilder(CMSAlgorithm.AES256_CBC)
                                 .setProvider(BouncyCastleProvider.PROVIDER_NAME).build());
+
+                //CMSAlgorithm.GOST28147_GCFB
 
                 callbackContext.success( Base64.encodeToString(cmsEnvelopedData.getEncoded(), Base64.NO_WRAP));
 
@@ -475,10 +631,147 @@ public class RutokenPlugin extends CordovaPlugin {
             }
 
         }
+        else if(action.equals("cmsEncrypts"))
+        {
+            cordova.getThreadPool().execute(new Runnable() {
+                @Override
+                public void run() {
+
+                    try {
+                        String certs = args.getString(0);
+                        String pData = args.getString(1);
+
+                        String[] arCerts = certs.split(",");
+
+                        CMSEnvelopedDataGenerator cmsEnvelopedDataGenerator = new CMSEnvelopedDataGenerator();
+
+                        X509Certificate certificate;
+
+                        for (String pubKey : arCerts){
+                            Log.v("certificate", "init");
+                            Log.v("certificate", pubKey);
+                            certificate = (X509Certificate) CertificateFactory.getInstance("X.509")
+                                    .generateCertificate(new ByteArrayInputStream(Base64.decode(pubKey, Base64.NO_WRAP)));
+                            cmsEnvelopedDataGenerator.addRecipientInfoGenerator(new JceKeyTransRecipientInfoGenerator(certificate));
+                        }
+
+                        CMSEnvelopedData cmsEnvelopedData = cmsEnvelopedDataGenerator.generate(new CMSProcessableByteArray(pData.getBytes()),
+                                new JceCMSContentEncryptorBuilder(CMSAlgorithm.DES_CBC)
+                                        //new JceCMSContentEncryptorBuilder(CMSAlgorithm.AES256_CBC)
+                                        .setProvider(BouncyCastleProvider.PROVIDER_NAME).build());
+
+                        //CMSAlgorithm.GOST28147_GCFB
+                        PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, Base64.encodeToString(cmsEnvelopedData.getEncoded(), Base64.NO_WRAP));
+                        pluginResult.setKeepCallback(true);
+                        callbackContext.sendPluginResult(pluginResult);
+
+                    }catch (Exception e){
+                        callbackContext.error(e.getMessage());
+
+                    }
+
+                }
+            });
+
+            return true;
+
+            /*
+            try {
+
+                String certs = args.getString(0);
+                String pData = args.getString(1);
+
+                String[] arCerts = certs.split(",");
+
+                CMSEnvelopedDataGenerator cmsEnvelopedDataGenerator = new CMSEnvelopedDataGenerator();
+
+                X509Certificate certificate;
+
+                for (String pubKey : arCerts){
+                    Log.v("certificate", "init");
+                    Log.v("certificate", pubKey);
+                    certificate = (X509Certificate) CertificateFactory.getInstance("X.509")
+                            .generateCertificate(new ByteArrayInputStream(Base64.decode(pubKey, Base64.NO_WRAP)));
+                    cmsEnvelopedDataGenerator.addRecipientInfoGenerator(new JceKeyTransRecipientInfoGenerator(certificate));
+                }
+
+                CMSEnvelopedData cmsEnvelopedData = cmsEnvelopedDataGenerator.generate(new CMSProcessableByteArray(pData.getBytes()),
+                        new JceCMSContentEncryptorBuilder(CMSAlgorithm.DES_CBC)
+                        //new JceCMSContentEncryptorBuilder(CMSAlgorithm.AES256_CBC)
+                                .setProvider(BouncyCastleProvider.PROVIDER_NAME).build());
+
+                //CMSAlgorithm.GOST28147_GCFB
+
+                callbackContext.success( Base64.encodeToString(cmsEnvelopedData.getEncoded(), Base64.NO_WRAP));
+
+                return true;
+
+            }catch (Exception e){
+                callbackContext.error(e.getMessage());
+                return false;
+            }
+            */
+        }
         else if(action.equals("cmsDecrypt"))
         {
+            cordova.getThreadPool().execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        String ckaId = args.getString(0);
+                        String pData = args.getString(1);
+
+
+                        byte[] encryptedCms = Base64.decode(pData, Base64.NO_WRAP);
+                        NativeLong session = mSession;
+                        CertificateAndGostKeyPair cert = null;
+                        for (Map.Entry<String, CertificateAndGostKeyPair> entry: mCertificateGostMap.entrySet()){
+                            if(new String(entry.getValue().getCertificate().getCkaId()).equals(ckaId)){
+                                cert = entry.getValue();
+                            }
+                        }
+                        long hPrivateKey =  cert.getGostKeyPair().getPrivKeyHandle();
+                        byte[] hPubKey =  Base64.decode(cert.getCertificate().getCertificatePem(), Base64.NO_WRAP);
+
+                        Security.addProvider(new BouncyCastleProvider());
+                        X509Certificate recipientCertificate = new JcaX509CertificateConverter().
+                                setProvider(BouncyCastleProvider.PROVIDER_NAME).
+                                getCertificate(new X509CertificateHolder(hPubKey));
+                        List<X509Certificate> possibleRecipientsCertificates = Collections.singletonList(recipientCertificate);
+                        final CMSEnvelopedData cms = new CMSEnvelopedData(encryptedCms);
+                        RecipientInformationStore recipientsStore = cms.getRecipientInfos();
+                        byte[] params = cms.getEncryptionAlgParams();
+                        byte[] iv = Arrays.copyOfRange(params, 2, params.length);
+
+                        byte[] pbtDecryptedData = possibleRecipientsCertificates.stream()
+                                .filter(possibleRecipientCert ->
+                                        !matchRecipients(recipientsStore, possibleRecipientCert).isEmpty())
+                                .findAny()
+                                .map(recipientCert -> {
+                                    try {
+                                        return matchRecipients(recipientsStore, recipientCert)
+                                                .iterator().next()
+                                                .getContent(new RsaKeyTransEnvelopedRecipient(session, hPrivateKey, iv));
+                                    } catch (CMSException e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                })
+                                .orElseThrow(() -> new IllegalStateException("Corresponding RecipientInformation is absent"));
+
+                        PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, new String(pbtDecryptedData));
+                        callbackContext.sendPluginResult(pluginResult);
+
+                    }catch (Exception e){
+                        Log.v("Error", e.getMessage());
+                        callbackContext.error(e.getMessage());
+                    }
+                }
+
+            });
+            return true;
+
+            /*
             //long m = System.currentTimeMillis();
-            RtPkcs11 mRtPkcs11 = RtPkcs11Library.getInstance();
             try {
                 //NativeLong slotId = new NativeLong(args.getInt(0));
                 //String pin = args.getString(1);
@@ -501,9 +794,6 @@ public class RutokenPlugin extends CordovaPlugin {
 
 
                 //m = System.currentTimeMillis();
-                /*NativeLong rvcl = mRtPkcs11.C_Login(session, new NativeLong(Pkcs11Constants.CKU_USER),
-                        pinToUse.getBytes(), new NativeLong(pinToUse.length()));
-                Pkcs11Exception.throwIfNotOk(rvcl);*/
 
                 //System.out.println("C_Login");
                 //System.out.println((double) (System.currentTimeMillis() - m) / 1000);
@@ -571,49 +861,48 @@ public class RutokenPlugin extends CordovaPlugin {
                 callbackContext.success(new String(pbtDecryptedData));
                 return true;
 
-
-                /*
-                NativeLong session = openSession(slotId);
-
-                NativeLong rvcl = mRtPkcs11.C_Login(session, new NativeLong(Pkcs11Constants.CKU_USER),
-                        pinToUse.getBytes(), new NativeLong(pinToUse.length()));
-                Pkcs11Exception.throwIfNotOk(rvcl);
-
-                CertificateAndGostKeyPair cert = getCertificateByCkaId(ckaId, session);
-                long hPrivateKey =  cert.getGostKeyPair().getPrivateKeyHandle(mRtPkcs11, session.longValue());
-
-                CK_MECHANISM ckm = new CK_MECHANISM(new NativeLong(Pkcs11Constants.CKM_RSA_PKCS),null, new NativeLong(0));
-
-                byte[] pbtEncryptedData = Base64.decode(pData, Base64.NO_WRAP);
-
-                NativeLong rv = mRtPkcs11.C_DecryptInit(session, ckm, new NativeLong(hPrivateKey));
-                Pkcs11Exception.throwIfNotOk(rv);
-
-                final NativeLongByReference ulDecryptedDataSize = new NativeLongByReference();
-
-                rv = mRtPkcs11.C_Decrypt(session, pbtEncryptedData,  new NativeLong(pbtEncryptedData.length), null, ulDecryptedDataSize);
-                Pkcs11Exception.throwIfNotOk(rv);
-
-                final byte[] pbtDecryptedData = new byte[ulDecryptedDataSize.getValue().intValue()];
-                rv = mRtPkcs11.C_Decrypt(session, pbtEncryptedData,  new NativeLong(pbtEncryptedData.length), pbtDecryptedData, ulDecryptedDataSize);
-                Pkcs11Exception.throwIfNotOk(rv);
-
-                mRtPkcs11.C_Logout(session);
-                closeSession(session);
-                callbackContext.success(new String(pbtDecryptedData));
-                return true;*/
-
             }catch (Exception e){
                 Log.v("Error", e.getMessage());
                 callbackContext.error(e.getMessage());
                 return false;
-            }
+            }*/
+
 
         }
         else if(action.equals("login"))
         {
+            cordova.getThreadPool().execute(new Runnable() {
+                @Override
+                public void run() {
+                    //long m = System.currentTimeMillis();
+                    RtPkcs11 mRtPkcs11 = RtPkcs11Library.getInstance();
+                    try {
+
+                        String pin = args.getString(0);
+                        //Log.v("cmsDecrypt ", "Init");
+
+                        String pinToUse = pin.length() > 0 ? pin : "";
+
+                        Log.v("Pin", pinToUse);
+                        NativeLong rvcl = mRtPkcs11.C_Login(mSession, new NativeLong(Pkcs11Constants.CKU_USER),
+                                pinToUse.getBytes(), new NativeLong(pinToUse.length()));
+                        Pkcs11Exception.throwIfNotOk(rvcl);
+
+                        PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, "ok");
+                        //pluginResult.setKeepCallback(true);
+                        callbackContext.sendPluginResult(pluginResult);
+
+                    }catch (Exception e){
+                        Log.v("Error", e.getMessage());
+                        callbackContext.error(e.getMessage());
+                    }
+                }
+
+            });
+            return true;
+
             //long m = System.currentTimeMillis();
-            RtPkcs11 mRtPkcs11 = RtPkcs11Library.getInstance();
+            /*RtPkcs11 mRtPkcs11 = RtPkcs11Library.getInstance();
             try {
 
                 String pin = args.getString(0);
@@ -633,7 +922,7 @@ public class RutokenPlugin extends CordovaPlugin {
                 Log.v("Error", e.getMessage());
                 callbackContext.error(e.getMessage());
                 return false;
-            }
+            }*/
 
         }
         else if(action.equals("cmsDecrypts"))
