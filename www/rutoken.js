@@ -22,8 +22,8 @@ Rutoken.prototype.cmsSign = function(params, success, fail) {
     ]);
 };
 Rutoken.prototype.cmsEncrypt = function(params, success, fail) {
-    cordova.exec(success, fail, 'RutokenPlugin', 'cmsEncrypt', [
-        params.ckaId,
+    cordova.exec(success, fail, 'RutokenPlugin', 'cmsEncrypts', [
+        params.certs,
         params.data,
     ]);
 };
@@ -33,20 +33,7 @@ Rutoken.prototype.cmsDecrypt = function(params, success, fail) {
         params.data,
     ]);
 };
-Rutoken.prototype.cmsDecrypts = function(params, success, fail) {
-    cordova.exec(success, fail, 'RutokenPlugin', 'cmsDecrypts', [
-        params.slotId,
-        params.pin,
-        params.ckaId,
-        params.data,
-    ]);
-};
-Rutoken.prototype.cmsEncrypts = function(params, success, fail) {
-    cordova.exec(success, fail, 'RutokenPlugin', 'cmsEncrypts', [
-        params.certs,
-        params.data,
-    ]);
-};
+
 Rutoken.prototype.login = function(params, success, fail) {
     cordova.exec(success, fail, 'RutokenPlugin', 'login', [
         params.pin,

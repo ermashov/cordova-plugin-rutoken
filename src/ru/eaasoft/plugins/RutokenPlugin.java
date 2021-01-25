@@ -137,76 +137,69 @@ public class RutokenPlugin extends CordovaPlugin {
 
         Context context = this.cordova.getActivity().getApplicationContext();
 
-        if (action.equals("init")) {
-           try{
-               NativeLong rv;
-               NativeLongByReference slotCount = new NativeLongByReference(new NativeLong(0));
-               rv = RtPkcs11Library.getInstance().C_GetSlotList(Pkcs11Constants.CK_FALSE, null, slotCount);
-               Pkcs11Exception.throwIfNotOk(rv);
-               NativeLong[] slotIds = new NativeLong[slotCount.getValue().intValue()];
-               rv = RtPkcs11Library.getInstance().C_GetSlotList(Pkcs11Constants.CK_TRUE, slotIds, slotCount);
-               Pkcs11Exception.throwIfNotOk(rv);
-               mSession = openSession(slotIds[0]);
-               callbackContext.success("ok");
-               return true;
-           }catch (Exception e){
-               callbackContext.error(e.getMessage());
-               return false;
-           }
-        }
-        else if (action.equals("getTokens"))
+        if (action.equals("getTokens"))
         {
-            try {
-                NativeLong rv;
-                NativeLongByReference slotCount = new NativeLongByReference(new NativeLong(0));
-                rv = RtPkcs11Library.getInstance().C_GetSlotList(Pkcs11Constants.CK_FALSE, null, slotCount);
-                Pkcs11Exception.throwIfNotOk(rv);
-                NativeLong[] slotIds = new NativeLong[slotCount.getValue().intValue()];
-                rv = RtPkcs11Library.getInstance().C_GetSlotList(Pkcs11Constants.CK_TRUE, slotIds, slotCount);
-                Pkcs11Exception.throwIfNotOk(rv);
-                JSONArray jsonArrResult = new JSONArray();
 
-                for (int i = 0; i != slotCount.getValue().intValue(); ++i) {
-                    //Log.v(getClass().getName(), slotIds[0].toString());
-                    JSONObject jsonObjResult = new JSONObject();
-                    CK_SLOT_INFO slotInfo = new CK_SLOT_INFO();
-                    NativeLong rvl;
+            cordova.getThreadPool().execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        NativeLong rv;
+                        NativeLongByReference slotCount = new NativeLongByReference(new NativeLong(0));
+                        rv = RtPkcs11Library.getInstance().C_GetSlotList(Pkcs11Constants.CK_FALSE, null, slotCount);
+                        Pkcs11Exception.throwIfNotOk(rv);
+                        NativeLong[] slotIds = new NativeLong[slotCount.getValue().intValue()];
+                        rv = RtPkcs11Library.getInstance().C_GetSlotList(Pkcs11Constants.CK_TRUE, slotIds, slotCount);
+                        Pkcs11Exception.throwIfNotOk(rv);
+                        JSONArray jsonArrResult = new JSONArray();
 
-                    rvl = RtPkcs11Library.getInstance().C_GetSlotInfo(slotIds[i], slotInfo);
-                    Pkcs11Exception.throwIfNotOk(rvl);
+                        for (int i = 0; i != slotCount.getValue().intValue(); ++i) {
+                            //Log.v(getClass().getName(), slotIds[0].toString());
+                            JSONObject jsonObjResult = new JSONObject();
+                            CK_SLOT_INFO slotInfo = new CK_SLOT_INFO();
+                            NativeLong rvl;
 
-                    jsonObjResult.put("slotId", slotIds[i].toString());
+                            rvl = RtPkcs11Library.getInstance().C_GetSlotInfo(slotIds[i], slotInfo);
+                            Pkcs11Exception.throwIfNotOk(rvl);
 
-                    final CK_TOKEN_INFO tokenInfo = new CK_TOKEN_INFO();
-                    Pkcs11Exception.throwIfNotOk(
-                            RtPkcs11Library.getInstance().C_GetTokenInfo(slotIds[0], tokenInfo));
+                            jsonObjResult.put("slotId", slotIds[i].toString());
 
-                    String mLabel = Utils.removeTrailingSpaces(tokenInfo.label);
-                    String mModel = Utils.removeTrailingSpaces(tokenInfo.model);
-                    String mSerialNumber = Utils.removeTrailingSpaces(tokenInfo.serialNumber);
-                    long decSerial = Long.parseLong(mSerialNumber, 16);
-                    String decSerialString = String.valueOf(decSerial);
-                    String mShortDecSerialNumber = String.valueOf(decSerial % 100000);
+                            final CK_TOKEN_INFO tokenInfo = new CK_TOKEN_INFO();
+                            Pkcs11Exception.throwIfNotOk(
+                                    RtPkcs11Library.getInstance().C_GetTokenInfo(slotIds[0], tokenInfo));
 
-                    jsonObjResult.put("label", mLabel);
-                    jsonObjResult.put("model", mModel);
-                    jsonObjResult.put("serialNumber", mSerialNumber);
-                    jsonObjResult.put("decSerial", decSerialString);
-                    jsonObjResult.put("shortDecSerialNumber", mShortDecSerialNumber);
+                            String mLabel = Utils.removeTrailingSpaces(tokenInfo.label);
+                            String mModel = Utils.removeTrailingSpaces(tokenInfo.model);
+                            String mSerialNumber = Utils.removeTrailingSpaces(tokenInfo.serialNumber);
+                            long decSerial = Long.parseLong(mSerialNumber, 16);
+                            String decSerialString = String.valueOf(decSerial);
+                            String mShortDecSerialNumber = String.valueOf(decSerial % 100000);
 
-                    jsonArrResult.put(jsonObjResult);
+                            jsonObjResult.put("label", mLabel);
+                            jsonObjResult.put("model", mModel);
+                            jsonObjResult.put("serialNumber", mSerialNumber);
+                            jsonObjResult.put("decSerial", decSerialString);
+                            jsonObjResult.put("shortDecSerialNumber", mShortDecSerialNumber);
+
+                            jsonArrResult.put(jsonObjResult);
+                        }
+
+                        if(slotIds.length > 0)
+                            mSession = openSession(slotIds[0]);
+
+                        PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, jsonArrResult.toString());
+                        callbackContext.sendPluginResult(pluginResult);
+
+                    } catch (Exception e) {
+                        callbackContext.error("token error ex.");
+
+                    }
+
                 }
+            });
 
-                if(slotIds.length > 0)
-                    mSession = openSession(slotIds[0]);
+            return true;
 
-                callbackContext.success(jsonArrResult.toString());
-                return true;
-
-            } catch (Exception e) {
-                callbackContext.error("token error ex.");
-                return false;
-            }
         }
         else if(action.equals("waitForSlotEvent"))
         {
@@ -293,11 +286,8 @@ public class RutokenPlugin extends CordovaPlugin {
                 @Override
                 public void run() {
                     try {
-                        //NativeLong slotId = new NativeLong(args.getInt(0));
-                        //NativeLong session = openSession(slotId);
-                        NativeLong session = mSession;
 
-                        //final HashMap<String, CertificateAndGostKeyPair> mCertificateGostMap = new HashMap<>();
+                        NativeLong session = mSession;
 
                         Certificate.CertificateCategory[] supportedCategories = {Certificate.CertificateCategory.UNSPECIFIED, Certificate.CertificateCategory.USER};
 
@@ -327,28 +317,12 @@ public class RutokenPlugin extends CordovaPlugin {
                             jsonObjectIssuer.put("OU",  IETFUtils.valueToString(x500name.getRDNs(BCStyle.OU)[0].getFirst().getValue()));
                             jsonObjectIssuer.put("CN",  IETFUtils.valueToString(x500name.getRDNs(BCStyle.CN)[0].getFirst().getValue()));
 
-                            /*
-                            RDN[] rdns = x500name.getRDNs();
-                            for ( RDN rdn : rdns ) {
-                                for ( AttributeTypeAndValue attribute : rdn.getTypesAndValues() ) {
-                                    String attrName = x500NameStyle.oidToDisplayName( attribute.getType() );
-                                    if(attrName != null && attrName.length() > 0)
-                                        jsonObjectIssuer.put( attrName.toUpperCase(),  attribute.getValue());
-                                }
-                            }*/
-
 
                             jsonObject.put("Issuer",  jsonObjectIssuer);
 
                             JSONObject jsonObjectSubject = new JSONObject();
                             x500NameStyle = RFC4519Style.INSTANCE;
                             x500name =  entry.getValue().getCertificate().getCertificateHolder().getSubject();
-
-                           /* for (RDN emails : x500name.getRDNs(BCStyle.EmailAddress)) {
-                                for (AttributeTypeAndValue emailAttr : emails.getTypesAndValues()) {
-                                    jsonObjectSubject.put("Email",  emailAttr.getValue());
-                                }
-                            }*/
 
                             jsonObjectSubject.put("Email",  IETFUtils.valueToString(x500name.getRDNs(BCStyle.EmailAddress)[0].getFirst().getValue()));
 
@@ -358,25 +332,13 @@ public class RutokenPlugin extends CordovaPlugin {
                             jsonObjectSubject.put("O",  IETFUtils.valueToString(x500name.getRDNs(BCStyle.O)[0].getFirst().getValue()));
                             jsonObjectSubject.put("CN",  IETFUtils.valueToString(x500name.getRDNs(BCStyle.CN)[0].getFirst().getValue()));
 
-                            /*rdns = x500name.getRDNs();
-                            for ( RDN rdn : rdns ) {
-                                for ( AttributeTypeAndValue attribute : rdn.getTypesAndValues() ) {
-                                    String attrName = x500NameStyle.oidToDisplayName( attribute.getType() );
-                                    if(attrName != null && attrName.length() > 0)
-                                        jsonObjectSubject.put( attrName.toUpperCase(),  attribute.getValue());
-                                }
-                            }*/
                             jsonObject.put("Subject",  jsonObjectSubject);
-                            Log.v("Pem", entry.getValue().getCertificate().getCertificatePem());
                             jsonObject.put("Pem",  entry.getValue().getCertificate().getCertificatePem());
                             jsonObject.put("SerialNumber", entry.getValue().getCertificate().getCertificateHolder().getSerialNumber().toString(16).toUpperCase());
                             jsonArrResult.put(jsonObject);
                         }
-
-                        //closeSession(session);
-
                         PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, jsonArrResult.toString());
-                        //pluginResult.setKeepCallback(true);
+
                         callbackContext.sendPluginResult(pluginResult);
 
                     }catch (Exception e){
@@ -386,82 +348,7 @@ public class RutokenPlugin extends CordovaPlugin {
             });
 
             return true;
-            /*
-            try {
-                //NativeLong slotId = new NativeLong(args.getInt(0));
-                //NativeLong session = openSession(slotId);
-                NativeLong session = mSession;
 
-                //final HashMap<String, CertificateAndGostKeyPair> mCertificateGostMap = new HashMap<>();
-
-                Certificate.CertificateCategory[] supportedCategories = {Certificate.CertificateCategory.UNSPECIFIED, Certificate.CertificateCategory.USER};
-
-                for (Certificate.CertificateCategory category : supportedCategories) {
-                    Map<String, CertificateAndGostKeyPair> certMap =  getCertificatesWithCategoryGost(category, session);
-                    mCertificateGostMap.putAll(certMap);
-                }
-
-
-                    JSONArray jsonArrResult = new JSONArray();
-
-                for (Map.Entry<String, CertificateAndGostKeyPair> entry: mCertificateGostMap.entrySet()){
-
-                    JSONObject jsonObject = new JSONObject();
-
-                    jsonObject.put("Fingerprint",  entry.getKey());
-                    Log.v("cert", new String(entry.getValue().getCertificate().getCkaId()));
-                    jsonObject.put("CkaId",  new String(entry.getValue().getCertificate().getCkaId()));
-
-                    JSONObject jsonObjectIssuer = new JSONObject();
-                    X500NameStyle x500NameStyle = RFC4519Style.INSTANCE;
-                    X500Name x500name =  entry.getValue().getCertificate().getCertificateHolder().getIssuer();
-                    RDN[] rdns = x500name.getRDNs();
-                    for ( RDN rdn : rdns ) {
-                        for ( AttributeTypeAndValue attribute : rdn.getTypesAndValues() ) {
-                            String attrName = x500NameStyle.oidToDisplayName( attribute.getType() );
-                            if(attrName != null && attrName.length() > 0)
-                                jsonObjectIssuer.put( attrName.toUpperCase(),  attribute.getValue());
-                        }
-                    }
-
-
-                    jsonObject.put("Issuer",  jsonObjectIssuer);
-
-                    JSONObject jsonObjectSubject = new JSONObject();
-                    x500NameStyle = RFC4519Style.INSTANCE;
-                    x500name =  entry.getValue().getCertificate().getCertificateHolder().getSubject();
-
-                    for (RDN emails : x500name.getRDNs(BCStyle.EmailAddress)) {
-                        for (AttributeTypeAndValue emailAttr : emails.getTypesAndValues()) {
-                            jsonObjectSubject.put("Email",  emailAttr.getValue());
-                        }
-                    }
-
-                    rdns = x500name.getRDNs();
-                    for ( RDN rdn : rdns ) {
-                        for ( AttributeTypeAndValue attribute : rdn.getTypesAndValues() ) {
-                            String attrName = x500NameStyle.oidToDisplayName( attribute.getType() );
-                            if(attrName != null && attrName.length() > 0)
-                                jsonObjectSubject.put( attrName.toUpperCase(),  attribute.getValue());
-                        }
-                    }
-                    jsonObject.put("Subject",  jsonObjectSubject);
-                    Log.v("Pem", entry.getValue().getCertificate().getCertificatePem());
-                    jsonObject.put("Pem",  entry.getValue().getCertificate().getCertificatePem());
-                    jsonObject.put("SerialNumber", entry.getValue().getCertificate().getCertificateHolder().getSerialNumber().toString(16).toUpperCase());
-                    jsonArrResult.put(jsonObject);
-                }
-
-                //closeSession(session);
-
-                callbackContext.success(jsonArrResult.toString());
-                return true;
-
-            }catch (Exception e){
-                callbackContext.error(e.getMessage());
-                return false;
-            }
-            */
         }
         else if(action.equals("cmsSign"))
         {
@@ -473,7 +360,7 @@ public class RutokenPlugin extends CordovaPlugin {
                         String ckaId = args.getString(0);
                         String pData = args.getString(1);
 
-                        //NativeLong session = openSession(slotId);
+
                         NativeLong session = mSession;
 
                         CertificateAndGostKeyPair cert = null;
@@ -487,8 +374,6 @@ public class RutokenPlugin extends CordovaPlugin {
                         if(cert == null)
                             callbackContext.error("Certificate not found");
 
-                        Log.v("ckaId", ckaId);
-
                         long hPrivateKey =  cert.getGostKeyPair().getPrivKeyHandle();
                         byte[] data = pData.getBytes();
                         DigestCalculatorProvider dg = new SimpleDigestCalculatorProvider(new SHA256DigestCalculator());
@@ -501,8 +386,6 @@ public class RutokenPlugin extends CordovaPlugin {
                         );
                         CMSTypedData cmsData = new CMSProcessableByteArray(data);
                         CMSSignedData attachedCmsSignature = generator.generate(cmsData, true);
-
-                        //closeSession(session);
                         PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, Base64.encodeToString(attachedCmsSignature.getEncoded(), Base64.NO_WRAP));
                         callbackContext.sendPluginResult(pluginResult);
 
@@ -514,124 +397,8 @@ public class RutokenPlugin extends CordovaPlugin {
             });
             return true;
 
-            /*try {
-
-                String ckaId = args.getString(0);
-                String pData = args.getString(1);
-
-                //NativeLong session = openSession(slotId);
-                NativeLong session = mSession;
-
-                CertificateAndGostKeyPair cert = null;
-                for (Map.Entry<String, CertificateAndGostKeyPair> entry: mCertificateGostMap.entrySet()){
-                    Log.v("ckaId item", new String(entry.getValue().getCertificate().getCkaId()));
-                    if(new String(entry.getValue().getCertificate().getCkaId()).equals(ckaId)){
-                        cert = entry.getValue();
-                    }
-                }
-
-                if(cert == null)
-                    callbackContext.error("Certificate not found");
-
-                Log.v("ckaId", ckaId);
-
-                long hPrivateKey =  cert.getGostKeyPair().getPrivKeyHandle();
-                byte[] data = pData.getBytes();
-                DigestCalculatorProvider dg = new SimpleDigestCalculatorProvider(new SHA256DigestCalculator());
-                RsaContentSigner mRsaContentSigner = new RsaContentSigner(Pkcs11RsaSigner.SignAlgorithm.RSASHA256, session.longValue(), hPrivateKey);
-                CMSSignedDataGenerator generator = new CMSSignedDataGenerator();
-                generator.addCertificate(cert.getCertificate().getCertificateHolder());
-                generator.addSignerInfoGenerator(
-                        new SignerInfoGeneratorBuilder(dg)
-                        .build(mRsaContentSigner, cert.getCertificate().getCertificateHolder())
-                );
-                CMSTypedData cmsData = new CMSProcessableByteArray(data);
-                CMSSignedData attachedCmsSignature = generator.generate(cmsData, true);
-
-                //closeSession(session);
-                callbackContext.success(Base64.encodeToString(attachedCmsSignature.getEncoded(), Base64.NO_WRAP));
-                return true;
-
-            }catch (Exception e){
-                callbackContext.error(e.getMessage());
-                return false;
-            }*/
-
         }
         else if(action.equals("cmsEncrypt"))
-        {
-
-            try {
-
-                //String hPubKey = args.getString(0);
-                String CkaId = args.getString(0);
-                String pData = args.getString(1);
-
-
-                String hPubKey = "";
-
-                Log.v("hPubKey", CkaId);
-
-                for (Map.Entry<String, CertificateAndGostKeyPair> entry: mCertificateGostMap.entrySet()){
-                    if(new String(entry.getValue().getCertificate().getCkaId()).equals(CkaId)){
-                        hPubKey = entry.getValue().getCertificate().getCertificatePem();
-                    }
-                }
-
-                Log.v("hPubKey", hPubKey);
-
-                CMSEnvelopedDataGenerator cmsEnvelopedDataGenerator = new CMSEnvelopedDataGenerator();
-                X509Certificate certificate = (X509Certificate) CertificateFactory.getInstance("X.509")
-                        .generateCertificate(new ByteArrayInputStream(Base64.decode(hPubKey, Base64.NO_WRAP)));
-
-                cmsEnvelopedDataGenerator.addRecipientInfoGenerator(new JceKeyTransRecipientInfoGenerator(certificate));
-
-                CMSEnvelopedData cmsEnvelopedData = cmsEnvelopedDataGenerator.generate(new CMSProcessableByteArray(pData.getBytes()),
-                        new JceCMSContentEncryptorBuilder(CMSAlgorithm.DES_CBC)
-                        //new JceCMSContentEncryptorBuilder(CMSAlgorithm.AES256_CBC)
-                                .setProvider(BouncyCastleProvider.PROVIDER_NAME).build());
-
-                //CMSAlgorithm.GOST28147_GCFB
-
-                callbackContext.success( Base64.encodeToString(cmsEnvelopedData.getEncoded(), Base64.NO_WRAP));
-
-                return true;
-                /*
-                NativeLong session = openSession(slotId);
-
-                NativeLong rvcl = mRtPkcs11.C_Login(session, new NativeLong(Pkcs11Constants.CKU_USER),
-                        pinToUse.getBytes(), new NativeLong(pinToUse.length()));
-                Pkcs11Exception.throwIfNotOk(rvcl);
-
-                CertificateAndGostKeyPair cert = getCertificateByCkaId(ckaId, session);
-                long hPubKey = cert.getGostKeyPair().getPubKeyHandle();
-
-                CK_MECHANISM ckm = new CK_MECHANISM(new NativeLong(Pkcs11Constants.CKM_RSA_PKCS),null, new NativeLong(0));
-                NativeLong rvE = mRtPkcs11.C_EncryptInit(session, ckm, new NativeLong(hPubKey));
-                Pkcs11Exception.throwIfNotOk(rvE);
-
-                byte[] pbtData = pData.getBytes();
-                final NativeLongByReference ulEncryptedDataSize = new NativeLongByReference();
-                rvE = mRtPkcs11.C_Encrypt(session, pbtData,  new NativeLong(pbtData.length), null, ulEncryptedDataSize);
-                Pkcs11Exception.throwIfNotOk(rvE);
-
-                final byte[] pbtEncryptedData = new byte[ulEncryptedDataSize.getValue().intValue()];
-                rvE = mRtPkcs11.C_Encrypt(session, pbtData,  new NativeLong(pbtData.length), pbtEncryptedData, ulEncryptedDataSize);
-                Pkcs11Exception.throwIfNotOk(rvE);
-
-                mRtPkcs11.C_Logout(session);
-                closeSession(session);
-
-                callbackContext.success( Base64.encodeToString(pbtEncryptedData, Base64.NO_WRAP));
-                return true;*/
-
-            }catch (Exception e){
-                callbackContext.error(e.getMessage());
-                return false;
-            }
-
-        }
-        else if(action.equals("cmsEncrypts"))
         {
             cordova.getThreadPool().execute(new Runnable() {
                 @Override
@@ -648,8 +415,6 @@ public class RutokenPlugin extends CordovaPlugin {
                         X509Certificate certificate;
 
                         for (String pubKey : arCerts){
-                            Log.v("certificate", "init");
-                            Log.v("certificate", pubKey);
                             certificate = (X509Certificate) CertificateFactory.getInstance("X.509")
                                     .generateCertificate(new ByteArrayInputStream(Base64.decode(pubKey, Base64.NO_WRAP)));
                             cmsEnvelopedDataGenerator.addRecipientInfoGenerator(new JceKeyTransRecipientInfoGenerator(certificate));
@@ -657,10 +422,7 @@ public class RutokenPlugin extends CordovaPlugin {
 
                         CMSEnvelopedData cmsEnvelopedData = cmsEnvelopedDataGenerator.generate(new CMSProcessableByteArray(pData.getBytes()),
                                 new JceCMSContentEncryptorBuilder(CMSAlgorithm.DES_CBC)
-                                        //new JceCMSContentEncryptorBuilder(CMSAlgorithm.AES256_CBC)
                                         .setProvider(BouncyCastleProvider.PROVIDER_NAME).build());
-
-                        //CMSAlgorithm.GOST28147_GCFB
                         PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, Base64.encodeToString(cmsEnvelopedData.getEncoded(), Base64.NO_WRAP));
                         pluginResult.setKeepCallback(true);
                         callbackContext.sendPluginResult(pluginResult);
@@ -675,42 +437,6 @@ public class RutokenPlugin extends CordovaPlugin {
 
             return true;
 
-            /*
-            try {
-
-                String certs = args.getString(0);
-                String pData = args.getString(1);
-
-                String[] arCerts = certs.split(",");
-
-                CMSEnvelopedDataGenerator cmsEnvelopedDataGenerator = new CMSEnvelopedDataGenerator();
-
-                X509Certificate certificate;
-
-                for (String pubKey : arCerts){
-                    Log.v("certificate", "init");
-                    Log.v("certificate", pubKey);
-                    certificate = (X509Certificate) CertificateFactory.getInstance("X.509")
-                            .generateCertificate(new ByteArrayInputStream(Base64.decode(pubKey, Base64.NO_WRAP)));
-                    cmsEnvelopedDataGenerator.addRecipientInfoGenerator(new JceKeyTransRecipientInfoGenerator(certificate));
-                }
-
-                CMSEnvelopedData cmsEnvelopedData = cmsEnvelopedDataGenerator.generate(new CMSProcessableByteArray(pData.getBytes()),
-                        new JceCMSContentEncryptorBuilder(CMSAlgorithm.DES_CBC)
-                        //new JceCMSContentEncryptorBuilder(CMSAlgorithm.AES256_CBC)
-                                .setProvider(BouncyCastleProvider.PROVIDER_NAME).build());
-
-                //CMSAlgorithm.GOST28147_GCFB
-
-                callbackContext.success( Base64.encodeToString(cmsEnvelopedData.getEncoded(), Base64.NO_WRAP));
-
-                return true;
-
-            }catch (Exception e){
-                callbackContext.error(e.getMessage());
-                return false;
-            }
-            */
         }
         else if(action.equals("cmsDecrypt"))
         {
@@ -770,104 +496,6 @@ public class RutokenPlugin extends CordovaPlugin {
             });
             return true;
 
-            /*
-            //long m = System.currentTimeMillis();
-            try {
-                //NativeLong slotId = new NativeLong(args.getInt(0));
-                //String pin = args.getString(1);
-                String ckaId = args.getString(0);
-                String pData = args.getString(1);
-
-                //Log.v("cmsDecrypt ", "Init");
-
-                byte[] encryptedCms = Base64.decode(pData, Base64.NO_WRAP);
-
-                //String pinToUse = pin.length() > 0 ? pin : "";
-
-                //m = System.currentTimeMillis();
-
-                //NativeLong session = openSession(slotId);
-                NativeLong session = mSession;
-
-                //System.out.println("openSession");
-                //System.out.println((double) (System.currentTimeMillis() - m) / 1000);
-
-
-                //m = System.currentTimeMillis();
-
-                //System.out.println("C_Login");
-                //System.out.println((double) (System.currentTimeMillis() - m) / 1000);
-
-                CertificateAndGostKeyPair cert = null;
-                Log.v("Cert", "1");
-                for (Map.Entry<String, CertificateAndGostKeyPair> entry: mCertificateGostMap.entrySet()){
-                    if(new String(entry.getValue().getCertificate().getCkaId()).equals(ckaId)){
-                        cert = entry.getValue();
-                    }
-                }
-                Log.v("Cert", "3");
-
-                //m = System.currentTimeMillis();
-                //CertificateAndGostKeyPair cert = getCertificateByCkaId(ckaId, session);
-                //long hPrivateKey =  cert.getGostKeyPair().getPrivateKeyHandle(mRtPkcs11, session.longValue());
-                long hPrivateKey =  cert.getGostKeyPair().getPrivKeyHandle();
-                byte[] hPubKey =  Base64.decode(cert.getCertificate().getCertificatePem(), Base64.NO_WRAP);
-
-                //System.out.println("getCertificateByCkaId");
-                //System.out.println((double) (System.currentTimeMillis() - m) / 1000);
-
-                //m = System.currentTimeMillis();
-                Security.addProvider(new BouncyCastleProvider());
-                X509Certificate recipientCertificate = new JcaX509CertificateConverter().
-                        setProvider(BouncyCastleProvider.PROVIDER_NAME).
-                        getCertificate(new X509CertificateHolder(hPubKey));
-                List<X509Certificate> possibleRecipientsCertificates = Collections.singletonList(recipientCertificate);
-                final CMSEnvelopedData cms = new CMSEnvelopedData(encryptedCms);
-                RecipientInformationStore recipientsStore = cms.getRecipientInfos();
-                byte[] params = cms.getEncryptionAlgParams();
-                byte[] iv = Arrays.copyOfRange(params, 2, params.length);
-
-                //System.out.println("BouncyCastleProvider");
-                //System.out.println((double) (System.currentTimeMillis() - m) / 1000);
-
-                //m = System.currentTimeMillis();
-                byte[] pbtDecryptedData = possibleRecipientsCertificates.stream()
-                        .filter(possibleRecipientCert ->
-                                !matchRecipients(recipientsStore, possibleRecipientCert).isEmpty())
-                        .findAny()
-                        .map(recipientCert -> {
-                            try {
-                                return matchRecipients(recipientsStore, recipientCert)
-                                        .iterator().next()
-                                        .getContent(new RsaKeyTransEnvelopedRecipient(session, hPrivateKey, iv));
-                            } catch (CMSException e) {
-                                throw new RuntimeException(e);
-                            }
-                        })
-                        .orElseThrow(() -> new IllegalStateException("Corresponding RecipientInformation is absent"));
-
-                //System.out.println("possibleRecipientsCertificates");
-                //System.out.println((double) (System.currentTimeMillis() - m) / 1000);
-
-                //m = System.currentTimeMillis();
-               // mRtPkcs11.C_Logout(session);
-                //System.out.println("C_Logout");
-                //System.out.println((double) (System.currentTimeMillis() - m) / 1000);
-
-                //m = System.currentTimeMillis();
-                //closeSession(session);
-                //System.out.println("C_Logout");
-                //System.out.println((double) (System.currentTimeMillis() - m) / 1000);
-                callbackContext.success(new String(pbtDecryptedData));
-                return true;
-
-            }catch (Exception e){
-                Log.v("Error", e.getMessage());
-                callbackContext.error(e.getMessage());
-                return false;
-            }*/
-
-
         }
         else if(action.equals("login"))
         {
@@ -879,17 +507,14 @@ public class RutokenPlugin extends CordovaPlugin {
                     try {
 
                         String pin = args.getString(0);
-                        //Log.v("cmsDecrypt ", "Init");
 
                         String pinToUse = pin.length() > 0 ? pin : "";
 
-                        Log.v("Pin", pinToUse);
                         NativeLong rvcl = mRtPkcs11.C_Login(mSession, new NativeLong(Pkcs11Constants.CKU_USER),
                                 pinToUse.getBytes(), new NativeLong(pinToUse.length()));
                         Pkcs11Exception.throwIfNotOk(rvcl);
 
                         PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, "ok");
-                        //pluginResult.setKeepCallback(true);
                         callbackContext.sendPluginResult(pluginResult);
 
                     }catch (Exception e){
@@ -900,29 +525,6 @@ public class RutokenPlugin extends CordovaPlugin {
 
             });
             return true;
-
-            //long m = System.currentTimeMillis();
-            /*RtPkcs11 mRtPkcs11 = RtPkcs11Library.getInstance();
-            try {
-
-                String pin = args.getString(0);
-                //Log.v("cmsDecrypt ", "Init");
-
-                String pinToUse = pin.length() > 0 ? pin : "";
-
-                Log.v("Pin", pinToUse);
-                NativeLong rvcl = mRtPkcs11.C_Login(mSession, new NativeLong(Pkcs11Constants.CKU_USER),
-                        pinToUse.getBytes(), new NativeLong(pinToUse.length()));
-                Pkcs11Exception.throwIfNotOk(rvcl);
-
-                callbackContext.success("ok");
-                return true;
-
-            }catch (Exception e){
-                Log.v("Error", e.getMessage());
-                callbackContext.error(e.getMessage());
-                return false;
-            }*/
 
         }
         else if(action.equals("cmsDecrypts"))
@@ -989,7 +591,6 @@ public class RutokenPlugin extends CordovaPlugin {
 
     private Collection<RecipientInformation> matchRecipients(RecipientInformationStore recipientsStore, X509Certificate possibleRecipientCert) {
         return recipientsStore.getRecipients(new JceKeyTransRecipientId(possibleRecipientCert));
-        //return (Collection<RecipientInformation>) recipientsStore.get(new JceKeyTransRecipientId(possibleRecipientCert));
     }
 
 
