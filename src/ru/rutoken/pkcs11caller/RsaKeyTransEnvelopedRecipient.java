@@ -82,18 +82,13 @@ public class RsaKeyTransEnvelopedRecipient implements KeyTransRecipient {
 
             NativeLongByReference decryptedDataSize = new NativeLongByReference(new NativeLong(8));
 
-            /*
             rv = pkcs11.C_Decrypt(mSessionHandle, encryptedContentKey, new NativeLong(encryptedContentKey.length), null, decryptedDataSize);
-            Pkcs11Exception.throwIfNotOk(rv);*/
-
-            Log.v("decryptedDataSize", String.valueOf(decryptedDataSize.getValue().intValue()));
+            Pkcs11Exception.throwIfNotOk(rv);
 
             byte[] decryptedData = new byte[decryptedDataSize.getValue().intValue()];
             //byte[] decryptedData = new byte[8];
             rv = pkcs11.C_Decrypt(mSessionHandle, encryptedContentKey, new NativeLong(encryptedContentKey.length), decryptedData, decryptedDataSize);
             Pkcs11Exception.throwIfNotOk(rv);
-
-            Log.v("decryptedDataSize = ", String.valueOf(decryptedDataSize.getValue().intValue()));
 
             //final Cipher c = Cipher.getInstance("AES/CBC/PKCS5Padding");
             final Cipher c = Cipher.getInstance("DES/CBC/PKCS5Padding");
