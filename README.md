@@ -48,8 +48,6 @@ window.plugins.rutoken.getCertificates(
 #Method cmsSign
 ```
 window.plugins.rutoken.cmsSign({
-        slotId: '"slotId" from function "getTokens" or "waitForSlotEvent"',
-        pin:'',
         ckaId:'"Cka Id" from function "getCertificates"',
         data:'hello',
     },
@@ -65,9 +63,7 @@ window.plugins.rutoken.cmsSign({
 #Method cmsEncrypt
 ```
 window.plugins.rutoken.cmsEncrypt({
-        slotId: '"slotId" from function "getTokens" or "waitForSlotEvent"',
-        pin:'',
-        ckaId:'"Cka Id" from function "getCertificates"',
+        certs:'['pem1', 'pem2', '...']',
         data:'hello',
     },
     function(encData){
@@ -82,10 +78,23 @@ window.plugins.rutoken.cmsEncrypt({
 #Method cmsDecrypt
 ```
  window.plugins.rutoken.cmsDecrypt({
-        slotId: '"slotId" from function "getTokens" or "waitForSlotEvent"',
-        pin:'',
         ckaId:'"Cka Id" from function "getCertificates"',
         data:encData,
+    },
+    function(data){
+        console.log(data);
+    },
+    function(error){
+        alert(error)
+    }
+);
+```
+
+
+#Method login
+```
+ window.plugins.rutoken.login({
+        pin:'pin',
     },
     function(data){
         console.log(data);
