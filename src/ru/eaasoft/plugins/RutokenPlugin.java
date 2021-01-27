@@ -178,8 +178,7 @@ public class RutokenPlugin extends CordovaPlugin {
                             jsonObjResult.put("label", mLabel);
                             jsonObjResult.put("model", mModel);
                             jsonObjResult.put("serialNumber", mSerialNumber);
-                            jsonObjResult.put("decSerial", decSerialString);
-                            jsonObjResult.put("shortDecSerialNumber", mShortDecSerialNumber);
+
 
                             jsonArrResult.put(jsonObjResult);
                         }
