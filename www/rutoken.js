@@ -22,7 +22,7 @@ Rutoken.prototype.cmsSign = function(params, success, fail) {
     ]);
 };
 Rutoken.prototype.cmsEncrypt = function(params, success, fail) {
-    cordova.exec(success, fail, 'RutokenPlugin', 'cmsEncrypts', [
+    cordova.exec(success, fail, 'RutokenPlugin', 'cmsEncrypt', [
         params.certs,
         params.data,
     ]);
