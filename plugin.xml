@@ -152,9 +152,9 @@
         <source-file src="src/ios/Frameworks/rtpkcs11ecp.framework" framework="true"/>
 
         <!--Frameworks-->
-        <framework src="src/ios/Frameworks/openssl.framework" custom="true" embed="true"/>
-        <framework src="src/ios/Frameworks/RtPcsc.framework" custom="true" embed="true"/>
-        <framework src="src/ios/Frameworks/rtpkcs11ecp.framework" custom="true" embed="true"/>
+        <framework src="openssl.framework" custom="true" embed="true"/>
+        <framework src="RtPcsc.framework" custom="true" embed="true"/>
+        <framework src="rtpkcs11ecp.framework" custom="true" embed="true"/>
 
         <!--Dependencies-->
         <dependency id="cordova-plugin-add-swift-support" version="^2.0.2"/>
