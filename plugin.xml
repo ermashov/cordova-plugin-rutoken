@@ -149,7 +149,6 @@
         <source-file src="src/ios/PKCS11/CertificateDto.swift"/>
         <source-file src="src/ios/PKCS11/String+Helpers.swift"/>
         <source-file src="src/ios/PKCS11/Data+Hex.swift"/>
-        <source-file src="src/ios/PKCS11/JSONEncoder+CodingStrategy.swift"/>
 
         <!--Rutoken frameworks should be embedded and linked (written twice as source-file and framework)-->
         <source-file src="src/ios/Frameworks/openssl.framework" target-dir="libs" framework="true"/>

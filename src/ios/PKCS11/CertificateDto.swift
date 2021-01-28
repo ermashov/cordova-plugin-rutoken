@@ -10,31 +10,49 @@ import Foundation
 public struct CertificateDto: Codable {
     public struct Issuer: Codable {
         public let c: String?
-        public let sT: String?
+        public let st: String?
         public let l: String?
         public let o: String?
-        public let oU: String?
-        public let cN: String?
+        public let ou: String?
+        public let cn: String?
+        
+        private enum CodingKeys : String, CodingKey {
+            case c = "C"
+            case st = "ST"
+            case l = "L"
+            case o = "O"
+            case ou = "OU"
+            case cn = "CN"
+        }
         
         public init(from x509: OpaquePointer) {
             let issuerName = X509_get_issuer_name(x509)
             
             self.c = getText(from: issuerName, by: NID_countryName)
-            self.sT = getText(from: issuerName, by: NID_streetAddress)
+            self.st = getText(from: issuerName, by: NID_streetAddress)
             self.l = getText(from: issuerName, by: NID_localityName)
             self.o = getText(from: issuerName, by: NID_organizationName)
-            self.oU = getText(from: issuerName, by: NID_organizationalUnitName)
-            self.cN = getText(from: issuerName, by: NID_commonName)
+            self.ou = getText(from: issuerName, by: NID_organizationalUnitName)
+            self.cn = getText(from: issuerName, by: NID_commonName)
         }
     }
     
     public struct Subject: Codable {
         public let email: String?
         public let c: String?
-        public let sT: String?
+        public let st: String?
         public let l: String?
         public let o: String?
-        public let cN: String?
+        public let cn: String?
+        
+        private enum CodingKeys : String, CodingKey {
+            case email = "Email"
+            case c = "C"
+            case st = "ST"
+            case l = "L"
+            case o = "O"
+            case cn = "CN"
+        }
         
         public init(from x509: OpaquePointer) {
             let subjectName = X509_get_subject_name(x509)
@@ -50,10 +68,10 @@ public struct CertificateDto: Codable {
             }
             X509_email_free(emailStack)
             self.c = getText(from: subjectName, by: NID_countryName)
-            self.sT = getText(from: subjectName, by: NID_streetAddress)
+            self.st = getText(from: subjectName, by: NID_streetAddress)
             self.l = getText(from: subjectName, by: NID_localityName)
             self.o = getText(from: subjectName, by: NID_organizationName)
-            self.cN = getText(from: subjectName, by: NID_commonName)
+            self.cn = getText(from: subjectName, by: NID_commonName)
         }
     }
     
@@ -63,6 +81,14 @@ public struct CertificateDto: Codable {
     /// base64 pem сертификата
     public let pem: String
     public let serialNumber: String?
+    
+    private enum CodingKeys : String, CodingKey {
+        case ckaId = "CkaId"
+        case issuer = "Issuer"
+        case subject = "Subject"
+        case pem = "Pem"
+        case serialNumber = "SerialNumber"
+    }
     
     public init(from certPointer: UnsafeMutablePointer<PKCS11_CERT>) {
         let x509 = certPointer.pointee.x509!
