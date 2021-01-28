@@ -11,6 +11,7 @@ public class PKCS11Wrapper {
     static let shared = PKCS11Wrapper()
     
     private var isMonitoringStarted = false
+    private var wasInitialized = false
     
     /// Контекст Libp11
     private var ctx: UnsafeMutablePointer<PKCS11_CTX>
@@ -40,20 +41,7 @@ public class PKCS11Wrapper {
     private var onTokenRemove: ((SlotDto) -> Void)?
     
     private init() {
-        ctx = PKCS11_CTX_new()
-        
-        var r: Int32 = -1
-        
-        // загружаем pkcs #11 модуль
-        // Внутри PKCS11_CTX_load вся инициализация engine (C_LoadModule, C_Initialize)
-        // Вторым параметром требуется имя модуля pkcs11 для openssl. Внезапно прокатило указание rtpkcs11ecp
-        // По нему внутри он делает dlopen и подгрузку динамической библиотеки
-        r = PKCS11_CTX_load(ctx, "rtpkcs11ecp.framework/rtpkcs11ecp")
-        guard r == 0 else {
-            fputs("loading pkcs11 engine failed:\n", stderr)
-            ERR_print_errors_fp(stderr)
-            fatalError()
-        }
+        self.ctx = PKCS11_CTX_new()
     }
     
     deinit {
@@ -66,6 +54,12 @@ public class PKCS11Wrapper {
     
     
     // MARK: - Private
+    private func checkInitialized() throws {
+        guard wasInitialized else {
+            throw PKCS11Error.engineIsNotInitialized
+        }
+    }
+    
     private func releaseSlots() {
         PKCS11_release_all_slots(ctx, storedSlots, storedNSlots)
         self.storedSlots = nil
@@ -222,9 +216,36 @@ public class PKCS11Wrapper {
     
     
     // MARK: - Public
+    public func initialize(completion: @escaping (Result<Void, PKCS11Error>) -> Void) {
+        serialQueue.async {
+            guard !self.wasInitialized else {
+                self.callbackQueue.async {
+                    completion(.failure(.engineIsAlreadyInitialized))
+                }
+                return
+            }
+            // загружаем pkcs #11 модуль
+            // Внутри PKCS11_CTX_load вся инициализация engine (C_LoadModule, C_Initialize)
+            // Вторым параметром требуется имя модуля pkcs11 для openssl. Внезапно прокатило указание rtpkcs11ecp
+            // По нему внутри он делает dlopen и подгрузку динамической библиотеки
+            let r = PKCS11_CTX_load(self.ctx, "rtpkcs11ecp.framework/rtpkcs11ecp")
+            guard r == 0 else {
+                fputs("loading pkcs11 engine failed:\n", stderr)
+                ERR_print_errors_fp(stderr)
+                fatalError()
+            }
+            
+            self.wasInitialized = true
+            self.callbackQueue.async {
+                completion(.success(()))
+            }
+        }
+    }
+    
     public func getTokens(completion: @escaping (Result<[TokenDto], PKCS11Error>) -> Void) {
         serialQueue.async {
             do {
+                try self.checkInitialized()
                 try self.updateStoredSlots()
                 let tokenDtos = self.getTokenDtos()
                 self.callbackQueue.async {
@@ -242,6 +263,7 @@ public class PKCS11Wrapper {
     public func getCertificates(completion: @escaping (Result<[CertificateDto], PKCS11Error>) -> Void) {
         serialQueue.async {
             do {
+                try self.checkInitialized()
                 // Лениво подгрузим сертификаты
                 if self.storedCerts == nil {
                     try self.updateStoredCerts()
@@ -265,6 +287,7 @@ public class PKCS11Wrapper {
     ) {
         serialQueue.async {
             do {
+                try self.checkInitialized()
                 // вертаем первый слот с подключенным токеном
                 guard let activeSlot = PKCS11_find_token(self.ctx, self.storedSlots, self.storedNSlots) else {
                     // при отсутствии активного слота с токеном валимся
@@ -299,6 +322,7 @@ public class PKCS11Wrapper {
         onTokenAdd: @escaping (TokenDto) -> Void,
         onTokenRemove: @escaping (SlotDto) -> Void
     ) {
+        try! self.checkInitialized()
         guard !isMonitoringStarted else { return }
         
         self.onTokenAdd = onTokenAdd
@@ -361,7 +385,6 @@ public class PKCS11Wrapper {
                             self.onTokenRemove?(dto)
                         }
                     }
-                    
                 }
             }
         }
@@ -374,6 +397,7 @@ public class PKCS11Wrapper {
     ) {
         serialQueue.async {
             do {
+                try self.checkInitialized()
                 // стек сертификатов получателей
                 guard let recipientsX509Stack = sk_X509_new_null() else {
                     throw PKCS11Error.generalError
@@ -414,6 +438,7 @@ public class PKCS11Wrapper {
     ) {
         serialQueue.async {
             do {
+                try self.checkInitialized()
                 // вертаем первый слот с подключенным токеном
                 guard let activeSlot = PKCS11_find_token(self.ctx, self.storedSlots, self.storedNSlots) else {
                     // при отсутствии активного слота с токеном валимся
@@ -459,6 +484,7 @@ public class PKCS11Wrapper {
     ) {
         serialQueue.async {
             do {
+                try self.checkInitialized()
                 // вертаем первый слот с подключенным токеном
                 guard let activeSlot = PKCS11_find_token(self.ctx, self.storedSlots, self.storedNSlots) else {
                     // при отсутствии активного слота с токеном валимся

@@ -1,6 +1,10 @@
 
 var Rutoken = function() {};
 
+Rutoken.prototype.initializeEngine = function(success, fail) {
+    cordova.exec(success, fail, 'RutokenPlugin', 'initializeEngine', []);
+};
+
 Rutoken.prototype.getTokens = function(success, fail) {
     cordova.exec(success, fail, 'RutokenPlugin', 'getTokens', []);
 };

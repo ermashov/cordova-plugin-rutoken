@@ -19,6 +19,26 @@ class RutokenPlugin: CDVPlugin {
 
     override func pluginInitialize() {
         super.pluginInitialize()
+        // Do smth on plugin initialization
+    }
+    
+    @objc(initializeEngine:)
+    func initializeEngine(command: CDVInvokedUrlCommand) {
+        PKCS11Wrapper.shared.initialize { [weak self] result in
+            guard let self = self else { return }
+            
+            let pluginResult: CDVPluginResult
+            switch result {
+            case .success:
+                pluginResult = CDVPluginResult(status: .ok)
+            case .failure(let error):
+                pluginResult = CDVPluginResult(
+                    status: .error,
+                    messageAs: error.localizedDescription
+                )
+            }
+            self.commandDelegate?.send(pluginResult, callbackId: command.callbackId)
+        }
     }
     
     @objc(getTokens:)

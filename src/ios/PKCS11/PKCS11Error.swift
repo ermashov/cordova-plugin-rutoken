@@ -9,6 +9,8 @@ import Foundation
 
 public enum PKCS11Error: LocalizedError {
     case generalError
+    case engineIsNotInitialized
+    case engineIsAlreadyInitialized
     case loginRequired
     case loginFailed
     case enumeratingSlotsFailed
@@ -32,6 +34,10 @@ public enum PKCS11Error: LocalizedError {
         switch self {
         case .generalError:
             return "PKCS11 general error"
+        case .engineIsNotInitialized:
+            return "PKCS11 engine is not initialized. Call initialize before all."
+        case .engineIsAlreadyInitialized:
+            return "PKCS11 engine is already initialized. Don't call initialize twice."
         case .loginRequired:
             return "PKCS11 token login required"
         case .loginFailed:
