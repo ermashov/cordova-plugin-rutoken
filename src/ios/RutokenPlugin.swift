@@ -9,37 +9,39 @@ import Foundation
 
 @objc(RutokenPlugin) 
 class RutokenPlugin: CDVPlugin {
-    // private let LOG_TAG = "RutokenPlugin"
+    private lazy var jsonEncoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToUpperCamelCase
+        encoder.outputFormatting =  .prettyPrinted
+        
+        return encoder
+    }()
 
     override func pluginInitialize() {
         super.pluginInitialize()
     }
-
-    func initialize(command: CDVInvokedUrlCommand) {
-        // let pluginResult = CDVPluginResult(status: CDVCommandStatus_OK)
-        // self.commandDelegate!.sendPluginResult(pluginResult, callbackId: command.callbackId)
+    
+    @objc(getTokens:)
+    func getTokens(command: CDVInvokedUrlCommand) {
+        PKCS11Wrapper.shared.getTokens { [weak self] result in
+            guard let self = self else { return }
+            
+            let pluginResult: CDVPluginResult
+            switch result {
+            case .success(let tokens):
+                let jsonData = try! self.jsonEncoder.encode(tokens)
+                let jsonString = String(data: jsonData, encoding: .utf8)
+                pluginResult = CDVPluginResult(
+                    status: CDVCommandStatus_OK,
+                    messageAs: jsonString
+                )
+            case .failure(let error):
+                pluginResult = CDVPluginResult(
+                    status: .error,
+                    messageAs: error.localizedDescription
+                )
+            }
+            self.commandDelegate?.send(pluginResult, callbackId: command.callbackId)
+        }
     }
-
-    // func addPermission(command: CDVInvokedUrlCommand) {
-    //     let message = command.argumentAtIndex(1) != nil ? "\(command.argumentAtIndex(1))" : ""
-    //     pscope!.addPermission(self.permissionMethods![command.argumentAtIndex(0) as! String]!() as! Permission, message: message)
-    //     let pluginResult = CDVPluginResult(status: CDVCommandStatus_OK)
-    //     self.commandDelegate!.sendPluginResult(pluginResult, callbackId: command.callbackId)
-    // }
-
-    // func show(command: CDVInvokedUrlCommand) {
-    //     pscope!.show()
-    //     let pluginResult = CDVPluginResult(status: CDVCommandStatus_OK)
-    //     self.commandDelegate!.sendPluginResult(pluginResult, callbackId: command.callbackId)
-    // }
-
-    // func requestPermission(command: CDVInvokedUrlCommand) {
-    //     let type = command.argumentAtIndex(0) as! String
-
-    //     self.pscope!.viewControllerForAlerts = self.viewController
-    //     self.requestMethods![type]!()
-
-    //     let pluginResult = CDVPluginResult(status: CDVCommandStatus_OK)
-    //     self.commandDelegate!.sendPluginResult(pluginResult, callbackId: command.callbackId)
-    // }
 }
