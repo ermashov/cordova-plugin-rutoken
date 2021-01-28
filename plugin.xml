@@ -97,6 +97,11 @@
                 <string>external-accessory</string>
             </array>
         </config-file>
+        <config-file target="*-Info.plist" parent="UISupportedExternalAccessoryProtocols">
+            <array>
+                <string>com.aktivco.rutokenecp</string>
+            </array>
+        </config-file>
         
         <!--Module entry point-->
         <source-file src="src/ios/RutokenPlugin.swift"/>
