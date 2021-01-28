@@ -146,11 +146,12 @@
         <source-file src="src/ios/PKCS11/Data+Hex.swift"/>
         <source-file src="src/ios/PKCS11/JSONEncoder+CodingStrategy.swift"/>
 
-        <!--Frameworks-->
         <!--Rutoken frameworks should be embedded and linked (written twice as source-file and framework)-->
-        <source-file src="src/ios/Frameworks/openssl.framework" target-dir="lib" framework="true"/>
-        <source-file src="src/ios/Frameworks/RtPcsc.framework" target-dir="lib" framework="true"/>
-        <source-file src="src/ios/Frameworks/rtpkcs11ecp.framework" target-dir="lib" framework="true"/>
+        <source-file src="src/ios/Frameworks/openssl.framework" framework="true"/>
+        <source-file src="src/ios/Frameworks/RtPcsc.framework" framework="true"/>
+        <source-file src="src/ios/Frameworks/rtpkcs11ecp.framework" framework="true"/>
+
+        <!--Frameworks-->
         <framework src="src/ios/Frameworks/openssl.framework" custom="true" embed="true"/>
         <framework src="src/ios/Frameworks/RtPcsc.framework" custom="true" embed="true"/>
         <framework src="src/ios/Frameworks/rtpkcs11ecp.framework" custom="true" embed="true"/>
