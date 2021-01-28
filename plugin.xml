@@ -146,10 +146,16 @@
         <source-file src="src/ios/PKCS11/Data+Hex.swift"/>
         <source-file src="src/ios/PKCS11/JSONEncoder+CodingStrategy.swift"/>
 
-        <!--Dependencies-->
+        <!--Frameworks-->
+        <!--Rutoken frameworks should be embedded and linked (written twice as source-file and framework)-->
+        <source-file src="src/ios/Frameworks/openssl.framework" target-dir="lib" framework="true"/>
+        <source-file src="src/ios/Frameworks/RtPcsc.framework" target-dir="lib" framework="true"/>
+        <source-file src="src/ios/Frameworks/rtpkcs11ecp.framework" target-dir="lib" framework="true"/>
         <framework src="src/ios/Frameworks/openssl.framework" custom="true" embed="true"/>
         <framework src="src/ios/Frameworks/RtPcsc.framework" custom="true" embed="true"/>
         <framework src="src/ios/Frameworks/rtpkcs11ecp.framework" custom="true" embed="true"/>
+
+        <!--Dependencies-->
         <dependency id="cordova-plugin-add-swift-support" version="^2.0.2"/>
     </platform>
 </plugin>

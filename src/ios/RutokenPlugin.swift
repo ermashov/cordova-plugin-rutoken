@@ -16,8 +16,8 @@ class RutokenPlugin: CDVPlugin {
     }
 
     func initialize(command: CDVInvokedUrlCommand) {
-        let pluginResult = CDVPluginResult(status: CDVCommandStatus_OK)
-        self.commandDelegate!.sendPluginResult(pluginResult, callbackId: command.callbackId)
+        // let pluginResult = CDVPluginResult(status: CDVCommandStatus_OK)
+        // self.commandDelegate!.sendPluginResult(pluginResult, callbackId: command.callbackId)
     }
 
     // func addPermission(command: CDVInvokedUrlCommand) {
