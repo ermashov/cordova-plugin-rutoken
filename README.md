@@ -1,5 +1,16 @@
 # cordova-plugin-rutoken
 
+#Method initializeEngine - необходимо для явной инициализации движка pkcs11. Требуется вызвать перед работой с остальными методами.
+```
+window.plugins.rutoken.initializeEngine(
+    function(){
+        console.log('PKCS11 initialization ok');
+    },
+    function(error){
+        alert(error);
+    }
+);
+```
 
 #Method getTokens 
 ```
