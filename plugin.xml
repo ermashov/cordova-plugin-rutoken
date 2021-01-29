@@ -102,6 +102,15 @@
                 <string>com.aktivco.rutokenecp</string>
             </array>
         </config-file>
+        <config-file target="*-Info.plist" parent="NSBluetoothAlwaysUsageDescription">
+            <string>Bluetooth будет использован для работы с устройствами Рутокен</string>
+        </config-file>
+        <config-file target="*-Info.plist" parent="NSBluetoothPeripheralUsageDescription">
+            <string>Bluetooth будет использован для работы с устройствами Рутокен</string>
+        </config-file>
+        <config-file target="*-Info.plist" parent="ITSAppUsesNonExemptEncryption">
+            <false/>
+        </config-file>
         
         <!--Module entry point-->
         <source-file src="src/ios/RutokenPlugin.swift"/>
