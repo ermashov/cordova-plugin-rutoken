@@ -16,6 +16,7 @@
     </js-module>
     <engines>
         <engine name="cordova-android" version=">=3.0.0"/>
+        <engine name="cordova-ios" version=">=3.0.0"/>
     </engines>
 
     <platform name="android">
@@ -81,5 +82,85 @@
         <resource-file src="src/android/jniLibs/arm64-v8a/librtpcsc.so" target="jniLibs/arm64-v8a/librtpcsc.so"/>
         <resource-file src="src/android/jniLibs/arm64-v8a/librtpkcs11ecp.so" target="jniLibs/arm64-v8a/librtpkcs11ecp.so"/>
 
+    </platform>
+    <platform name="ios">
+        <config-file target="config.xml" parent="/*">
+            <feature name="RutokenPlugin">
+                <param name="ios-package" value="RutokenPlugin"/>
+                <param name="onload" value="true"/>
+            </feature>
+        </config-file>
+
+        <!--Modifiing target app Info.plist file-->
+        <config-file target="*-Info.plist" parent="UIBackgroundModes">
+            <array>
+                <string>external-accessory</string>
+            </array>
+        </config-file>
+        <config-file target="*-Info.plist" parent="UISupportedExternalAccessoryProtocols">
+            <array>
+                <string>com.aktivco.rutokenecp</string>
+            </array>
+        </config-file>
+        
+        <!--Module entry point-->
+        <source-file src="src/ios/RutokenPlugin.swift"/>
+
+        <!--Swift bridging header-->
+        <header-file src="src/ios/RutokenPlugin-Bridging-Header.h"/>
+
+        <!--extending of libp11-->
+        <header-file src="src/ios/libp11+ext/libp11+ext.h"/>
+        <source-file src="src/ios/libp11+ext/libp11+ext.c"/>
+
+        <!--libp11-->
+        <header-file src="src/ios/libp11/config.h"/>
+        <header-file src="src/ios/libp11/eng_err.h"/>
+        <header-file src="src/ios/libp11/engine.h"/>
+        <header-file src="src/ios/libp11/libp11-int.h"/>
+        <header-file src="src/ios/libp11/libp11.h"/>
+        <header-file src="src/ios/libp11/p11_err.h"/>
+        <header-file src="src/ios/libp11/pkcs11.h"/>
+        <source-file src="src/ios/libp11/eng_back.c"/>
+        <source-file src="src/ios/libp11/eng_err.c"/>
+        <source-file src="src/ios/libp11/eng_front.c"/>
+        <source-file src="src/ios/libp11/eng_parse.c"/>
+        <source-file src="src/ios/libp11/libpkcs11.c"/>
+        <source-file src="src/ios/libp11/p11_atfork.c"/>
+        <source-file src="src/ios/libp11/p11_attr.c"/>
+        <source-file src="src/ios/libp11/p11_cert.c"/>
+        <source-file src="src/ios/libp11/p11_ckr.c"/>
+        <source-file src="src/ios/libp11/p11_ec.c"/>
+        <source-file src="src/ios/libp11/p11_err.c"/>
+        <source-file src="src/ios/libp11/p11_front.c"/>
+        <source-file src="src/ios/libp11/p11_key.c"/>
+        <source-file src="src/ios/libp11/p11_load.c"/>
+        <source-file src="src/ios/libp11/p11_misc.c"/>
+        <source-file src="src/ios/libp11/p11_pkey.c"/>
+        <source-file src="src/ios/libp11/p11_rsa.c"/>
+        <source-file src="src/ios/libp11/p11_slot.c"/>
+
+        <!--Common swift code-->
+        <source-file src="src/ios/PKCS11/PKCS11Error.swift"/>
+        <source-file src="src/ios/PKCS11/PKCS11Wrapper.swift"/>
+        <source-file src="src/ios/PKCS11/CMSData.swift"/>
+        <source-file src="src/ios/PKCS11/SlotDto.swift"/>
+        <source-file src="src/ios/PKCS11/TokenDto.swift"/>
+        <source-file src="src/ios/PKCS11/CertificateDto.swift"/>
+        <source-file src="src/ios/PKCS11/String+Helpers.swift"/>
+        <source-file src="src/ios/PKCS11/Data+Hex.swift"/>
+
+        <!--Rutoken frameworks should be embedded and linked (written twice as source-file and framework)-->
+        <source-file src="src/ios/Frameworks/openssl.framework" target-dir="libs" framework="true"/>
+        <source-file src="src/ios/Frameworks/RtPcsc.framework" target-dir="libs" framework="true"/>
+        <source-file src="src/ios/Frameworks/rtpkcs11ecp.framework" target-dir="libs" framework="true"/>
+
+        <!--Frameworks-->
+        <framework src="src/ios/Frameworks/openssl.framework" custom="true" embed="true"/>
+        <framework src="src/ios/Frameworks/RtPcsc.framework" custom="true" embed="true"/>
+        <framework src="src/ios/Frameworks/rtpkcs11ecp.framework" custom="true" embed="true"/>
+
+        <!--Dependencies-->
+        <dependency id="cordova-plugin-add-swift-support" version="^2.0.2"/>
     </platform>
 </plugin>
