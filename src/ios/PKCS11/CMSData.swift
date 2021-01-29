@@ -124,7 +124,7 @@ public enum CMSData {
             }
         }
         
-        guard let cms = CMS_sign(x509, evpPKey, nil, bio, UInt32(CMS_BINARY | CMS_NOSMIMECAP | CMS_DETACHED)) else {
+        guard let cms = CMS_sign(x509, evpPKey, nil, bio, UInt32(CMS_BINARY | CMS_NOSMIMECAP)) else {
             throw PKCS11Error.generalError
         }
         defer {
