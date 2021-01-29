@@ -110,34 +110,36 @@ public class RutokenPlugin extends CordovaPlugin {
     private String mTokenSerial = NO_TOKEN;
     private NativeLong mSession;
     private HashMap<String, CertificateAndGostKeyPair> mCertificateGostMap = new HashMap<>();
-    public static CordovaWebView gWebView;
 
     public RutokenPlugin() {}
-
-    public void pluginInitialize() {
-        Log.d("CryptoproPlugin", "==> af ________ CryptoproPlugin pluginInitialize");
-    }
-
-    public void initialize(CordovaInterface cordova, CordovaWebView webView) {
-        super.initialize(cordova, webView);
-        gWebView = webView;
-        Log.d("CryptoproPlugin", "==> af ________ CryptoproPlugin initialize");
-        try {
-            NativeLong rv;
-            CK_C_INITIALIZE_ARGS initializeArgs = new CK_C_INITIALIZE_ARGS(null, null,
-                    null, null, new NativeLong(Pkcs11Constants.CKF_OS_LOCKING_OK), null);
-            rv = RtPkcs11Library.getInstance().C_Initialize(initializeArgs);
-            Pkcs11Exception.throwIfNotOk(rv);
-        } catch (Exception e) {
-            Log.v(getClass().getName(), e.getMessage());
-        }
-    }
 
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) {
 
         Context context = this.cordova.getActivity().getApplicationContext();
 
-        if (action.equals("getTokens"))
+        if (action.equals("initializeEngine"))
+        {
+            cordova.getThreadPool().execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        NativeLong rv;
+                        CK_C_INITIALIZE_ARGS initializeArgs = new CK_C_INITIALIZE_ARGS(null, null,
+                                null, null, new NativeLong(Pkcs11Constants.CKF_OS_LOCKING_OK), null);
+                        rv = RtPkcs11Library.getInstance().C_Initialize(initializeArgs);
+                        Pkcs11Exception.throwIfNotOk(rv);
+
+                        PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, "Ok");
+                        callbackContext.sendPluginResult(pluginResult);
+
+                    } catch (Exception e) {
+                        callbackContext.error("token error ex.");
+                    }
+                }
+            });
+
+            return true;
+        }else if (action.equals("getTokens"))
         {
 
             cordova.getThreadPool().execute(new Runnable() {
@@ -222,7 +224,6 @@ public class RutokenPlugin extends CordovaPlugin {
                             String jsonResult = "";
 
                             Pkcs11Exception.throwIfNotOk(rv);
-                            Log.d("waitForSlotEvent", "find slot id" + slotId.getValue().toString());
 
                             CK_SLOT_INFO slotInfo = new CK_SLOT_INFO();
                             NativeLong rvl;
@@ -255,11 +256,11 @@ public class RutokenPlugin extends CordovaPlugin {
                                 jsonObjTokenInfo.put("shortDecSerialNumber", mShortDecSerialNumber);
                                 jsonObjResult.put("event", "add");
                                 mSession = openSession(slotId.getValue());
-                                Log.d("waitForSlotEvent", "add");
+                                //Log.d("waitForSlotEvent", "add");
                             } else {
                                 jsonObjResult.put("event", "remove");
                                 //closeSession(mSession);
-                                Log.d("waitForSlotEvent", "remove");
+                                //Log.d("waitForSlotEvent", "remove");
                             }
                             jsonObjResult.put("tokenInfo", jsonObjTokenInfo);
 
@@ -364,7 +365,7 @@ public class RutokenPlugin extends CordovaPlugin {
 
                         CertificateAndGostKeyPair cert = null;
                         for (Map.Entry<String, CertificateAndGostKeyPair> entry: mCertificateGostMap.entrySet()){
-                            Log.v("ckaId item", new String(entry.getValue().getCertificate().getCkaId()));
+                            //Log.v("ckaId item", new String(entry.getValue().getCertificate().getCkaId()));
                             if(new String(entry.getValue().getCertificate().getCkaId()).equals(ckaId)){
                                 cert = entry.getValue();
                             }
@@ -415,7 +416,7 @@ public class RutokenPlugin extends CordovaPlugin {
 
                         for (String pubKey : arCerts){
                             certificate = (X509Certificate) CertificateFactory.getInstance("X.509")
-                                    .generateCertificate(new ByteArrayInputStream(Base64.decode(pubKey, Base64.NO_WRAP)));
+                                    .generateCertificate(new ByteArrayInputStream(Base64.decode(pubKey.getBytes("UTF-8"), Base64.NO_WRAP)));
                             cmsEnvelopedDataGenerator.addRecipientInfoGenerator(new JceKeyTransRecipientInfoGenerator(certificate));
                         }
 
@@ -592,7 +593,6 @@ public class RutokenPlugin extends CordovaPlugin {
         return recipientsStore.getRecipients(new JceKeyTransRecipientId(possibleRecipientCert));
     }
 
-
     private  void closeSession(NativeLong mSession){
         try {
             NativeLong rv = RtPkcs11Library.getInstance().C_CloseSession(mSession);
@@ -704,7 +704,6 @@ public class RutokenPlugin extends CordovaPlugin {
     }
 
     @Override public void onDestroy () {
-        Log.v("CryptoproPlugin","af ==> ______________ onStop");
         super.onDestroy();
         RtPkcs11Library.getInstance().C_Finalize(null);
     };
